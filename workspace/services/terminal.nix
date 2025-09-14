@@ -26,6 +26,7 @@ in pkgs.stdenv.mkDerivation {
   buildInputs = with pkgs; [
     ttyd
     bashInteractive
+    zsh
     curl
   ];
   dontUnpack = true;
@@ -38,6 +39,7 @@ in pkgs.stdenv.mkDerivation {
     chmod +x $out/bin/dojo-terminal
     ln -s ${pkgs.ttyd}/bin/ttyd $out/bin/ttyd
     ln -s ${pkgs.ttyd}/bin/ttyd $out/bin/terminal
+    ln -s ${pkgs.zsh}/bin/zsh $out/bin/zsh
 
     runHook postInstall
   '';

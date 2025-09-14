@@ -87,11 +87,14 @@
 
             corePackages = with pkgs; [
               bashInteractive
+              zsh
+              oh-my-zsh
               cacert
               coreutils
               curl
               findutils
               gawk
+              git
               glibc
               glibc.static
               glibcLocales
