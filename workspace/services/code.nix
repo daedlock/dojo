@@ -40,10 +40,14 @@ let
       EXTENSIONS_DIR="/run/challenge/share/code/extensions"
     else
       EXTENSIONS_DIR="/home/hacker/.vscode-server/extensions"
+      mkdir -p "$(dirname "$EXTENSIONS_DIR")"
       mkdir -p "$EXTENSIONS_DIR"
+      # Fix permissions for hacker user
+      chown -R hacker:hacker /home/hacker/.vscode-server 2>/dev/null || true
       # Copy pre-installed extensions if they don't exist
       if [ ! -d "$EXTENSIONS_DIR/ms-python.python" ]; then
         cp -r @out@/share/code/extensions/* "$EXTENSIONS_DIR/" 2>/dev/null || true
+        chown -R hacker:hacker "$EXTENSIONS_DIR" 2>/dev/null || true
       fi
     fi
 
