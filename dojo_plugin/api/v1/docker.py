@@ -141,7 +141,7 @@ def start_container(docker_client, user, as_user, user_mounts, dojo_challenge, p
         environment={
             "HOME": "/home/hacker",
             "PATH": env_path,
-            "SHELL": f"{dojo_bin_path}/bash",
+            "SHELL": f"{dojo_bin_path}/zsh",
             "DOJO_AUTH_TOKEN": auth_token,
         },
         labels={

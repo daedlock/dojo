@@ -39,7 +39,12 @@ let
     if [ -d /run/challenge/share/code/extensions ]; then
       EXTENSIONS_DIR="/run/challenge/share/code/extensions"
     else
-      EXTENSIONS_DIR="@out@/share/code/extensions"
+      EXTENSIONS_DIR="/home/hacker/.vscode-server/extensions"
+      mkdir -p "$EXTENSIONS_DIR"
+      # Copy pre-installed extensions if they don't exist
+      if [ ! -d "$EXTENSIONS_DIR/ms-python.python" ]; then
+        cp -r @out@/share/code/extensions/* "$EXTENSIONS_DIR/" 2>/dev/null || true
+      fi
     fi
 
     ${service}/bin/dojo-service start code-service/code-server \
