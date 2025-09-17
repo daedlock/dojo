@@ -19,6 +19,14 @@ let
       ln -sfT $path /run/dojo/$(basename $path)
     done
 
+    # Link openssh libexec for SCP/SFTP support
+    if [ -d "$DEFAULT_PROFILE/libexec" ]; then
+      mkdir -p /run/dojo/libexec
+      for exec_file in "$DEFAULT_PROFILE"/libexec/*; do
+        [ -f "$exec_file" ] && ln -sfT "$exec_file" /run/dojo/libexec/$(basename "$exec_file")
+      done
+    fi
+
     mkdir -pm 1777 /run/dojo/var /tmp
     mkdir /run/dojo/var/root
 

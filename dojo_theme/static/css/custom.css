@@ -1163,7 +1163,7 @@ main {
 /* 1. Module page (accordion) - relative positioned within accordion body */
 .accordion-item .workspace-controls {
   position: relative;
-  margin-top: 1rem;
+  margin-top: 0;
   margin-bottom: 1rem;
   border-radius: var(--border-radius);
 }

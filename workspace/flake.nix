@@ -1,5 +1,5 @@
 {
-  description = "DOJO Workspace Flake";
+  description = "DOJO Workspace Flake - Updated";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.05";
@@ -85,9 +85,29 @@
 
             additional = import ./additional/additional.nix { inherit pkgs; };
 
+            pythonPackages = ps: with ps; [
+              angr
+              asteval
+              flask
+              ipython
+              jupyter
+              psutil
+              pwntools
+              pycryptodome
+              pyroute2
+              r2pipe
+              requests
+              ropper
+              scapy
+              selenium
+            ];
+
+            pythonEnv = pkgs.python3.withPackages pythonPackages;
+
             corePackages = with pkgs; [
               bashInteractive
               zsh
+	      radare2
               oh-my-zsh
               cacert
               coreutils
@@ -106,14 +126,17 @@
               man
               ncurses
               nettools
+              openssh
               procps
-              python3
               util-linux
               wget
               which
-
+              ncdu
+              nodejs
+              wireshark
+              bat
+              (lib.hiPrio pythonEnv)
               (lib.hiPrio ldd)
-
               init
               exec-suid
               sudo

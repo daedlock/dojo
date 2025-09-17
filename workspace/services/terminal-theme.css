@@ -1,0 +1,65 @@
+/* Everforest Terminal Theme for ttyd */
+
+/* Main terminal container */
+body {
+  background: #22282c !important;
+  color: #d3c6aa !important;
+  font-family: 'Monaco', 'Menlo', 'Consolas', monospace !important;
+}
+
+/* Terminal window */
+.terminal {
+  background: #22282c !important;
+  color: #d3c6aa !important;
+}
+
+/* Terminal viewport */
+.xterm-viewport {
+  background: #22282c !important;
+}
+
+/* Terminal screen */
+.xterm-screen {
+  background: #22282c !important;
+}
+
+/* Cursor styling */
+.xterm-cursor-layer .xterm-cursor {
+  background: #7fbbb3 !important;
+  color: #22282c !important;
+}
+
+/* Selection highlighting */
+.xterm-selection {
+  background: rgba(127, 187, 179, 0.3) !important;
+}
+
+/* Default text colors */
+.xterm-fg-default {
+  color: #d3c6aa !important;
+}
+
+.xterm-bg-default {
+  background: #22282c !important;
+}
+
+/* Custom scrollbar */
+.xterm-viewport::-webkit-scrollbar {
+  width: 8px;
+  background: #272f34;
+}
+
+.xterm-viewport::-webkit-scrollbar-thumb {
+  background: #374247;
+  border-radius: 4px;
+}
+
+.xterm-viewport::-webkit-scrollbar-thumb:hover {
+  background: #888888;
+}
+
+/* Terminal title bar if present */
+.terminal-titlebar {
+  background: #272f34 !important;
+  color: #d3c6aa !important;
+}

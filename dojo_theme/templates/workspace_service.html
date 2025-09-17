@@ -36,22 +36,24 @@
 {% endblock %}
 
 {% block content %}
-
-<iframe id="workspace_iframe" name="{{ iframe_name }}" src="" class="d-none"></iframe>
-<h1 class="inactive">Loading...</h1>
-
+<div class="challenge-workspace">
+  <iframe id="workspace_iframe" name="{{ iframe_name }}" src="" class="d-none"></iframe>
+  <h1 class="inactive">Loading...</h1>
+  {% include "components/actionbar.html" %}
+</div>
 {% endblock %}
 
 {% block scripts %}
 {{ super() }}
+<script defer src="{{ url_for('views.themes', path='js/dojo/actionbar.js') }}"></script>
 
 <script>
     let response =  fetch("/pwncollege_api/v1/workspace?service={{ service }}").then(response => response.json()).then(data => {
-        console.log(data);
         if (data.active) {
-            document.getElementById("workspace_iframe").src = data.iframe_src;
+            const iframe = document.getElementById("workspace_iframe");
+            iframe.src = data.iframe_src;
             document.querySelector("h1").classList.add("d-none");
-            document.getElementById("workspace_iframe").classList.remove("d-none");
+            iframe.classList.remove("d-none");
         }
         else {
             document.querySelector("h1").innerText = "No active challenge session; start a challenge!";
