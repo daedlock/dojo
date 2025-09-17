@@ -19,6 +19,7 @@ from CTFd.plugins.flags import FLAG_CLASSES, BaseFlag, FlagException
 from .models import Dojos, DojoChallenges, Belts, Emojis
 from .config import DOJO_HOST, bootstrap
 from .utils import unserialize_user_flag, render_markdown
+from .utils.dojo import get_current_dojo_challenge
 from .utils.awards import update_awards
 from .utils.feed import publish_challenge_solve
 from .utils.query_timer import init_query_timer
@@ -171,6 +172,7 @@ def load(app):
     app.register_blueprint(api, url_prefix="/pwncollege_api/v1")
 
     app.jinja_env.filters["markdown"] = render_markdown
+    app.jinja_env.globals["get_current_dojo_challenge"] = get_current_dojo_challenge
 
     register_admin_plugin_menu_bar("Dojos", "/admin/dojos")
     register_admin_plugin_menu_bar("Desktops", "/admin/desktops")

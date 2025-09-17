@@ -522,7 +522,6 @@ header .navbar {
   border: 1px solid var(--border-color);
   border-radius: var(--border-radius);
   padding: 0;
-  height: 140px;
   position: relative;
   overflow: hidden;
 }
@@ -557,39 +556,39 @@ header .navbar {
 /* Progress bar styling */
 .progress-bar {
   position: absolute;
-  bottom: 4px;
-  left: 4px;
-  right: 4px;
-  height: 18px;
-  background: var(--accent-primary);
+  bottom: 6px;
+  left: 6px;
+  right: 6px;
+  height: 20px;
+  background: var(--bg-tertiary);
   margin: 0;
-  border-radius: var(--border-radius);
+  border-radius: 50px;
   border: 1px solid var(--border-color);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
-  color: var(--accent-primary-dark);
+  color: var(--text-primary);
   overflow: hidden;
 }
 
 .card-body .progress-bar {
   position: absolute;
-  bottom: 4px;
-  left: 4px;
-  right: 4px;
-  height: 18px;
-  background: var(--accent-primary);
+  bottom: 6px;
+  left: 6px;
+  right: 6px;
+  height: 20px;
+  background: var(--bg-tertiary);
   margin: 0;
-  border-radius: var(--border-radius);
+  border-radius: 50px;
   border: 1px solid var(--border-color);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
-  color: var(--accent-primary-dark);
+  color: var(--text-primary);
   overflow: hidden;
 }
 
@@ -599,14 +598,16 @@ header .navbar {
   left: 0;
   height: 100%;
   background: var(--accent-primary);
-  border-radius: var(--border-radius);
+  border-radius: 50px;
   transition: width 0.3s ease;
 }
 
 .progress-bar .progress-text {
   position: relative;
   z-index: 2;
-  text-shadow: 0 1px 2px var(--shadow-dark);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  color: var(--text-primary);
+  font-weight: 600;
 }
 
 .card-active {
@@ -655,32 +656,32 @@ header .navbar {
 
 /* Challenge states */
 .challenge-solved {
-  color: var(--text-muted);
+  color: var(--text-secondary) !important;
   position: relative;
 }
 
 .challenge-solved::before {
   content: '✓ ';
-  color: var(--accent-green);
+  color: var(--text-secondary);
   font-weight: bold;
   margin-right: 0.5rem;
 }
 
 .challenge-solved .card-title {
-  color: var(--text-muted);
-}
-
-.challenge-solved .card-text {
-  color: var(--text-muted);
-  opacity: 0.7;
-}
-
-.challenge-unsolved {
   color: var(--text-secondary);
 }
 
+.challenge-solved .card-text {
+  color: var(--text-secondary);
+  opacity: 0.8;
+}
+
+.challenge-unsolved {
+  color: var(--text-muted);
+}
+
 .challenge-active {
-  color: var(--accent-yellow) !important;
+  color: var(--accent-warning) !important;
 }
 
 .challenge-active .card-title {
@@ -801,7 +802,7 @@ header .navbar {
 }
 
 .challenge-solved .challenge-name > i {
-  color: var(--accent-primary);
+  color: var(--text-secondary) !important;
 }
 
 i.challenge-solved {
@@ -829,25 +830,26 @@ i.challenge-solved {
 
 /* Challenge state styling for module page */
 .challenge-solved .accordion-item-name {
-  color: var(--text-muted);
-  opacity: 0.8;
+  color: var(--text-secondary) !important;
+  opacity: 1;
 }
 
 .challenge-solved .accordion-item-name::before {
   content: '✓';
-  color: var(--accent-primary);
+  color: var(--bg-primary);
   font-weight: bold;
   margin-right: 0.75rem;
-  width: 1.25rem;
-  height: 1.25rem;
+  width: 1.5rem;
+  height: 1.5rem;
   text-align: center;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--overlay-accent);
-  border-radius: 2px;
-  font-size: 12px;
+  background: var(--text-secondary);
+  border-radius: 6px;
+  font-size: 18px;
 }
+
 
 .challenge-unsolved .accordion-item-name::before {
   content: '○';
@@ -1258,7 +1260,7 @@ a.text-dark {
 /* Hide Help and Chat buttons in navbar */
 a[href="/sensei"],
 a[href*="discord.gg"],
-#base-navbars > ul.navbar-nav.mr-auto > li:nth-child(3) > a {
+a[href*="/sensai"] {
   display: none !important;
 }
 
@@ -2064,4 +2066,54 @@ iframe[src*="7681"]::after {
     bottom: 1rem;
     right: 1rem;
   }
+}
+
+/* Active challenge link in navbar - compact style for right side */
+.navbar .active-challenge-link,
+.navbar .active-challenge-link span {
+  background: var(--alert-warning-bg) !important;
+  border: 1px solid var(--accent-warning) !important;
+  border-radius: 15px !important;
+  color: var(--accent-warning) !important;
+  font-weight: 500 !important;
+  font-size: 11px !important;
+  margin: 0 4px !important;
+  padding: 2px 8px !important;
+  transition: all 0.2s ease !important;
+  min-width: auto !important;
+}
+
+.navbar .active-challenge-link span {
+  background: transparent !important;
+  border: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.navbar .active-challenge-link:hover {
+  background: rgba(219, 188, 127, 0.2) !important;
+  color: var(--accent-warning) !important;
+  text-decoration: none !important;
+}
+
+.navbar .active-challenge-link:hover span {
+  color: var(--accent-warning) !important;
+}
+
+/* Make it even more compact on smaller screens */
+@media (max-width: 991px) {
+  .navbar .active-challenge-link,
+  .navbar .active-challenge-link span {
+    padding: 4px 6px !important;
+    font-size: 11px !important;
+  }
+
+  .navbar .active-challenge-link span {
+    padding: 0 !important;
+  }
+}
+
+/* Center align navbar items */
+.navbar-expand-md .navbar-nav {
+  align-items: center !important;
 }
