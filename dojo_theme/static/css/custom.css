@@ -18,7 +18,11 @@ body {
   font-family: var(--font-family) !important;
   background: var(--progress-bg) !important;
   color: var(--text-primary);
-  font-size: 14px;
+  font-size: 1rem;
+}
+
+p, ul, ol, li, div, span {
+  font-size: 1rem;
 }
 
 /* Step 2: Color System */
@@ -127,6 +131,28 @@ body {
   /* Additional Everforest colors */
   --everforest-orange: #e69875;
   --everforest-purple: #d699b6;
+
+  /* Legacy color variables for actionbar.js compatibility */
+  --brand-green: var(--text-secondary);
+  --error: var(--accent-danger);
+  --warn: var(--accent-warning);
+
+  /* Search and interaction colors */
+  --search-highlight-bg: rgba(219, 188, 127, 0.15);
+  --search-hover-bg: rgba(127, 187, 179, 0.05);
+  --search-hover-border: rgba(127, 187, 179, 0.15);
+  --search-focus-ring: rgba(127, 187, 179, 0.1);
+  --search-shadow: rgba(0, 0, 0, 0.5);
+  --search-close-hover: rgba(255, 255, 255, 0.05);
+  --search-selected-bg: rgba(127, 187, 179, 0.08);
+  --search-selected-border: rgba(127, 187, 179, 0.3);
+
+  /* Alert colors */
+  --alert-primary-bg: rgba(127, 187, 179, 0.1);
+  --alert-warning-bg: rgba(219, 188, 127, 0.1);
+  --alert-danger-bg: rgba(230, 126, 128, 0.1);
+  --alert-success-bg: rgba(167, 192, 128, 0.1);
+  --alert-info-bg: rgba(127, 187, 179, 0.1);
   --everforest-aqua: #83c092;
 
   /* Border colors */
@@ -136,7 +162,7 @@ body {
   /* Accordion specific colors */
   --accordion-bg: var(--bg-primary);
   --accordion-item-bg: var(--bg-secondary);
-  --accordion-body-bg: #232a2e;
+  --accordion-body-bg: hsl(202 12% 19% / 1);
 
   /* Hero section colors */
   --hero-bg: #2d353b;  /* same as body bg */
@@ -222,7 +248,7 @@ pre {
   border: none !important;
   overflow-x: auto;
   font-family: inherit !important;
-  font-size: 12px !important;
+  font-size: 1rem !important;
 }
 
 
@@ -1117,39 +1143,98 @@ main {
   padding-right: 0 !important;
 }
 
-/* Workspace Controls Styling */
+/* ===== WORKSPACE CONTROLS - HIERARCHICAL STYLING ===== */
+
+/* Base workspace controls styling */
 .workspace-controls {
   background: var(--bg-secondary);
   border: 1px solid var(--border-color);
   border-radius: 0;
   width: 100%;
-  margin-top: 0;
   padding: 10px;
   display: flex;
   flex-wrap: wrap;
-  position: absolute !important;
-  bottom: -6px;
   align-items: center;
   gap: 10px;
 }
 
-.collapse.show .workspace-controls {
+/* 1. Module page (accordion) - relative positioned within accordion body */
+.accordion-item .workspace-controls {
+  position: relative;
+  margin-top: 1rem;
+  margin-bottom: 1rem;
   border-radius: var(--border-radius);
 }
 
-/* Workspace controls inside accordion should be relative positioned */
-.accordion .workspace-controls,
-.accordion-item .workspace-controls {
-  position: relative !important;
-  bottom: auto !important;
-  margin-top: 1rem !important;
-  margin-bottom: 1rem !important;
+/* 2. Standalone workspace pages - positioned at bottom of workspace */
+.challenge-workspace:not(.accordion-item *) .workspace-controls {
+  position: absolute;
+  bottom: 0;
+  margin: 0;
+}
+
+/* 3. Fullscreen mode - fixed at bottom of screen */
+.workspace-fullscreen .workspace-controls {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 10001;
+  border-bottom: none;
+  border-radius: 0;
+  margin: 0;
 }
 
 /* Alert styling */
 .alert {
   margin-top: 20px !important;
   border-radius: var(--border-radius) !important;
+  border-width: 1px !important;
+  border-style: solid !important;
+  font-weight: 500 !important;
+}
+
+/* Alert variants */
+.alert-primary {
+  background-color: var(--alert-primary-bg) !important;
+  border-color: var(--accent-primary) !important;
+  color: var(--accent-primary) !important;
+}
+
+.alert-warning {
+  background-color: var(--alert-warning-bg) !important;
+  border-color: var(--accent-warning) !important;
+  color: var(--accent-warning) !important;
+}
+
+.alert-danger {
+  background-color: var(--alert-danger-bg) !important;
+  border-color: var(--accent-danger) !important;
+  color: var(--accent-danger) !important;
+}
+
+.alert-success {
+  background-color: var(--alert-success-bg) !important;
+  border-color: var(--text-secondary) !important;
+  color: var(--text-secondary) !important;
+}
+
+.alert-info {
+  background-color: var(--alert-info-bg) !important;
+  border-color: var(--accent-primary) !important;
+  color: var(--accent-primary) !important;
+}
+
+/* Alert close button */
+.alert .close,
+.alert .btn-close {
+  color: inherit !important;
+  opacity: 0.7 !important;
+}
+
+.alert .close:hover,
+.alert .btn-close:hover {
+  opacity: 1 !important;
 }
 
 /* Fix text-dark class visibility */
@@ -1195,6 +1280,248 @@ a[href*="discord.gg"],
   background: rgba(255, 255, 255, 0.1) !important;
   border-radius: 30px !important;
   border: none !important;
+}
+
+/* Search Modal Styling */
+#searchModal .modal-dialog {
+  margin: 5vh auto !important;
+  max-width: 720px !important;
+  width: 90% !important;
+}
+
+#searchModal .modal-content {
+  background: var(--bg-primary) !important;
+  border: 2px solid var(--border-color) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 20px 60px var(--search-shadow) !important;
+}
+
+#searchModal .modal-body {
+  padding: 1.5rem !important;
+}
+
+/* Search Input Group */
+#searchModal .input-group {
+  border-radius: 8px !important;
+  overflow: hidden;
+  background: var(--bg-secondary) !important;
+  border: 2px solid transparent !important;
+  transition: all 0.3s ease;
+}
+
+#searchModal .input-group:focus-within {
+  border-color: var(--accent-primary) !important;
+  box-shadow: 0 0 0 3px var(--search-focus-ring) !important;
+}
+
+#searchModal .input-group-text {
+  background: transparent !important;
+  border: none !important;
+  color: var(--accent-primary) !important;
+  padding: 12px 15px !important;
+}
+
+#searchModal #searchInput {
+  background: transparent !important;
+  border: none !important;
+  color: var(--text-primary) !important;
+  font-family: 'Courier New', monospace;
+  font-size: 16px !important;
+  letter-spacing: 0.5px;
+  padding: 12px 15px !important;
+  height: auto !important;
+}
+
+#searchModal #searchInput::placeholder {
+  color: var(--text-muted) !important;
+  opacity: 0.5;
+}
+
+#searchModal #searchInput:focus {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+#searchModal .btn-outline-light {
+  background: transparent !important;
+  border: none !important;
+  color: var(--text-muted) !important;
+  padding: 12px 15px !important;
+  transition: all 0.2s ease;
+}
+
+#searchModal .btn-outline-light:hover {
+  background: var(--search-close-hover) !important;
+  color: var(--accent-danger) !important;
+  transform: rotate(90deg);
+}
+
+/* Search Results Container */
+#searchResults {
+  max-height: 65vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  margin-top: 1rem !important;
+  padding: 0;
+}
+
+/* Custom scrollbar for results */
+#searchResults::-webkit-scrollbar {
+  width: 3px;
+}
+
+#searchResults::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+#searchResults::-webkit-scrollbar-thumb {
+  background: var(--text-muted);
+  border-radius: 2px;
+  opacity: 0.3;
+}
+
+#searchResults::-webkit-scrollbar-thumb:hover {
+  opacity: 0.6;
+}
+
+/* Result Categories */
+#searchResults .text-secondary {
+  color: var(--text-muted) !important;
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  letter-spacing: 1.2px !important;
+  text-transform: uppercase !important;
+  margin: 1rem 0 0.3rem 0 !important;
+  padding: 0 !important;
+  border: none !important;
+  opacity: 0.7;
+}
+
+#searchResults .text-secondary:first-child {
+  margin-top: 0 !important;
+}
+
+/* Result Items Container */
+#searchResults .d-block {
+  background: transparent;
+  border-radius: var(--border-radius) !important;
+  margin-bottom: 4px !important;
+  border: 1px solid transparent !important;
+  transition: all 0.2s ease;
+}
+
+#searchResults .d-block:hover {
+  background: var(--search-hover-bg) !important;
+  border-color: var(--search-hover-border) !important;
+}
+
+/* Result Links - Minimal Clean Design */
+#searchResults a.text-light {
+  color: var(--text-primary) !important;
+  text-decoration: none !important;
+  display: block !important;
+  padding: 12px 8px !important;
+  width: 100% !important;
+  transition: all 0.2s ease;
+  border: none !important;
+  outline: none !important;
+}
+
+#searchResults a.text-light:hover {
+  color: var(--text-primary) !important;
+  text-decoration: none !important;
+}
+
+#searchResults a.text-light:focus {
+  outline: none !important;
+}
+
+/* Result Title */
+#searchResults a.text-light > div:first-child {
+  font-weight: 500 !important;
+  font-size: 14px !important;
+  line-height: 1.3 !important;
+  margin-bottom: 4px !important;
+  color: inherit !important;
+}
+
+#searchResults .d-block:hover a.text-light > div:first-child {
+  color: var(--accent-primary) !important;
+}
+
+/* Remove breadcrumb - it's messy */
+#searchResults a.text-light::before {
+  display: none !important;
+}
+
+/* Result Descriptions */
+#searchResults .text-muted {
+  color: var(--text-muted) !important;
+  font-size: 11px !important;
+  line-height: 1.3 !important;
+  margin-top: 0 !important;
+  opacity: 0.7;
+}
+
+#searchResults .d-block:hover .text-muted {
+  opacity: 0.9;
+}
+
+/* Highlighted Search Terms */
+#searchResults b {
+  color: var(--accent-warning) !important;
+  background: var(--search-highlight-bg) !important;
+  padding: 1px 3px;
+  border-radius: 2px;
+  font-weight: 600 !important;
+  font-size: inherit;
+}
+
+/* Active/Selected Result */
+#searchResults .d-block[style*="background-color: rgb(183"] {
+  background: var(--search-selected-bg) !important;
+  border-color: var(--search-selected-border) !important;
+}
+
+#searchResults .d-block[style*="background-color: rgb(183"] a.text-light > div:first-child {
+  color: var(--accent-primary) !important;
+}
+
+#searchResults .d-block[style*="background-color: rgb(183"] .text-muted {
+  opacity: 1 !important;
+}
+
+/* No Results Message */
+#searchResults:empty::before {
+  content: "Type to search...";
+  color: var(--text-muted);
+  opacity: 0.5;
+  display: block;
+  text-align: center;
+  padding: 2rem;
+  font-style: italic;
+  font-size: 13px;
+}
+
+/* Focus management for keyboard navigation */
+#searchResults .d-block:focus-within {
+  background: var(--search-hover-bg) !important;
+  border-color: var(--accent-primary) !important;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  #searchResults {
+    max-height: 50vh;
+  }
+
+  #searchResults a.text-light {
+    padding: 10px 6px !important;
+  }
+
+  #searchResults a.text-light > div:first-child {
+    font-size: 13px !important;
+  }
 }
 
 /* Profile page styling */
@@ -1273,35 +1600,90 @@ a[href*="discord.gg"],
   margin-top: 2rem;
 }
 
-/* Challenge input styling - same as flag input */
-.challenge-input {
-  background: var(--bg-primary);
-  color: var(--text-primary);
-  border: 2px solid transparent !important;
-  padding: 8px 14px;
-  border-radius: 20px !important;
-  font-family: 'Courier New', monospace;
-  font-size: 14px;
-  width: 100%;
-  transition: all 0.3s ease;
-  letter-spacing: 0.5px;
+/* Challenge input styling - clean Everforest theme */
+#challenge-input {
+  background: var(--bg-secondary) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--border-color) !important;
+  padding: 12px 16px !important;
+  border-radius: var(--border-radius) !important;
+  font-family: var(--font-family) !important;
+  font-size: 1rem !important;
+  width: 100% !important;
+  transition: all 0.2s ease !important;
+  box-shadow: none !important;
 }
 
-.challenge-input::placeholder {
-  color: var(--text-muted);
-  opacity: 0.5;
-  font-style: italic;
+#challenge-input::placeholder {
+  color: var(--text-muted) !important;
+  opacity: 0.7 !important;
 }
 
-.challenge-input:hover {
-  background: var(--bg-secondary);
-}
-
-.challenge-input:focus {
-  outline: none;
+#challenge-input:hover {
+  background: var(--bg-tertiary) !important;
   border-color: var(--accent-primary) !important;
-  background: var(--bg-secondary);
-  box-shadow: 0 0 0 3px rgba(127, 187, 179, 0.2);
+}
+
+#challenge-input:focus {
+  outline: none !important;
+  background: var(--bg-tertiary) !important;
+  border-color: var(--accent-primary) !important;
+  box-shadow: 0 0 0 3px rgba(127, 187, 179, 0.1) !important;
+}
+
+/* Challenge init row layout improvements */
+.challenge-init.row {
+  display: flex !important;
+  align-items: stretch !important;
+  gap: 16px !important;
+  margin: 0 !important;
+}
+
+.challenge-init.row > [class*="col-"] {
+  padding: 0 !important;
+  display: flex !important;
+  align-items: stretch !important;
+}
+
+/* Button group styling */
+.challenge-init.row .col-md-3 {
+  flex: 0 0 auto !important;
+}
+
+.challenge-init.row .col-md-6 {
+  flex: 1 !important;
+  margin-left: auto !important;
+}
+
+/* Make buttons same height as input */
+.challenge-init .btn {
+  height: 52px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  min-width: 120px !important;
+  font-size: 1rem !important;
+  border: 1px solid var(--border-color) !important;
+  background: var(--bg-secondary) !important;
+  color: var(--text-primary) !important;
+  border-radius: var(--border-radius) !important;
+  transition: all 0.2s ease !important;
+}
+
+.challenge-init .btn:hover {
+  background: var(--bg-tertiary) !important;
+  border-color: var(--accent-primary) !important;
+  color: var(--text-primary) !important;
+}
+
+.challenge-init .btn i {
+  font-size: 1.2rem !important;
+}
+
+/* Flag input container to match button height */
+.challenge-init #challenge-input {
+  height: 52px !important;
 }
 
 .workspace-control {
@@ -1413,21 +1795,76 @@ a[href*="discord.gg"],
   margin: 0 !important;
 }
 
+/* Professional toast notification */
 #workspace-notification-banner {
-  position: absolute;
-  top: -30px;
-  left: 0;
-  right: 0;
-  background: var(--accent-warning);
-  color: var(--bg-primary);
-  padding: 5px 10px;
-  border-radius: var(--border-radius);
-  font-size: 12px;
-  display: none;
+  position: fixed !important;
+  bottom: 24px !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  background: var(--alert-danger-bg) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--accent-danger) !important;
+  border-radius: 50px !important;
+  padding: 12px 20px !important;
+  font-size: 0.875rem !important;
+  font-weight: 600 !important;
+  line-height: 1.4 !important;
+  text-align: center !important;
+  z-index: 10000 !important;
+  max-width: 480px !important;
+  min-width: 200px !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  box-shadow: 0 4px 12px rgba(45, 53, 59, 0.4) !important;
+  backdrop-filter: blur(20px) !important;
+  display: none !important;
+  height: auto !important;
 }
 
-#workspace-notification-banner:not(:empty) {
-  display: block;
+#workspace-notification-banner.animate-banner {
+  display: block !important;
+  animation: toastShow 20s ease forwards !important;
+}
+
+#workspace-notification-banner.animate-banner-fast {
+  display: block !important;
+  animation: toastShow 5s ease forwards !important;
+}
+
+/* Success toast styling - detect by party emoji and bold text or success border color */
+#workspace-notification-banner:has(b),
+#workspace-notification-banner[style*="var(--brand-green)"] {
+  background: var(--alert-success-bg) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--text-secondary) !important;
+}
+
+/* Warning toast styling */
+#workspace-notification-banner[style*="var(--warn)"] {
+  background: var(--alert-warning-bg) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--accent-warning) !important;
+}
+
+/* Bottom slide animation */
+@keyframes toastShow {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(20px) scale(0.9);
+  }
+  5% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+  90% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(20px) scale(0.9);
+  }
 }
 
 /* GitHub edit link - floating top right */
@@ -1458,6 +1895,58 @@ iframe[src*="7681"] {
   max-height: calc(100vh - 111px) !important;
 }
 
+/* Terminal container and xterm styling */
+#terminal-container .terminal.xterm {
+  background: var(--bg-primary) !important;
+}
+
+#terminal-container .xterm-viewport {
+  background-color: var(--bg-primary) !important;
+}
+
+/* Modern Everforest scrollbar for terminal */
+#terminal-container .xterm-viewport::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+#terminal-container .xterm-viewport::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+  border-radius: 4px;
+}
+
+#terminal-container .xterm-viewport::-webkit-scrollbar-thumb {
+  background: var(--accent-primary);
+  border-radius: 4px;
+  border: 1px solid var(--bg-secondary);
+  opacity: 0.6;
+}
+
+#terminal-container .xterm-viewport::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-primary);
+  opacity: 0.8;
+}
+
+#terminal-container .xterm-viewport::-webkit-scrollbar-thumb:active {
+  background: var(--accent-primary);
+  opacity: 1;
+}
+
+#terminal-container .xterm-viewport::-webkit-scrollbar-corner {
+  background: var(--bg-secondary);
+}
+
+/* Terminal screen styling */
+#terminal-container .xterm-screen {
+  background: var(--bg-primary) !important;
+}
+
+/* Terminal selection styling */
+#terminal-container .xterm .xterm-selection div {
+  background-color: var(--accent-primary) !important;
+  opacity: 0.3 !important;
+}
+
 /* Fullscreen mode styles */
 .workspace-fullscreen {
   position: fixed !important;
@@ -1479,6 +1968,13 @@ iframe[src*="7681"] {
   top: 0 !important;
   left: 0 !important;
   z-index: 10000 !important;
+}
+
+/* Cleaned up - styles moved to hierarchical section above */
+
+.challenge-workspace.workspace-fullscreen #workspace-iframe,
+.challenge-workspace.workspace-fullscreen iframe[src*="7681"] {
+  max-height: calc(100vh - 40px) !important;
 }
 
 /* Terminal content styling - inject into ttyd */

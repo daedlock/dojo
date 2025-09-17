@@ -125,12 +125,14 @@ function actionSubmitFlag(event) {
 
     CTFd.api.post_challenge_attempt(params, body)
     .then(function (response) {
-        const challengeName = context(event).find("#current-challenge-id").attr("data-challenge-name");
+        const challengeName = context(event).find("#current-challenge-id").attr("data-challenge-name") || "Challenge";
+        console.log("Flag response:", response.data.status, "Challenge name:", challengeName);
+
         if (response.data.status == "incorrect") {
-            animateBanner(event, "Incorrect!", "error");
+            animateBanner(event, "❌ Incorrect Flag", "error");
         }
         else if (response.data.status == "correct") {
-            animateBanner(event, `&#127881 Successfully completed <b>${challengeName}</b>! &#127881`, "success");
+            animateBanner(event, "&#127881 Successfully completed <b>" + challengeName + "</b>! &#127881", "success");
             if ($(".challenge-active").length) {
                 const unsolved_flag = $(".challenge-active").find("i.challenge-unsolved")
                 if(unsolved_flag.hasClass("far") && unsolved_flag.hasClass("fa-flag")) {
@@ -143,7 +145,7 @@ function actionSubmitFlag(event) {
             }
         }
         else if (response.data.status == "already_solved") {
-            animateBanner(event, `&#127881 Solved <b>${challengeName}</b>! &#127881`, "success");
+            animateBanner(event, "Challenge already solved", "success");
         }
         else {
             animateBanner(event, "Submission Failed.", "warn");
