@@ -80,9 +80,9 @@ document.addEventListener('DOMContentLoaded', function () {
     const searchNavItem = document.querySelector('a.nav-link[href="#"] i.fa-search')?.closest('a');
     if (searchNavItem) {
         searchNavItem.addEventListener('click', function (e) {
-        e.preventDefault();
-        $('#searchModal').modal('show').on('shown.bs.modal', function () {
-            document.getElementById('searchInput').focus();
+            e.preventDefault();
+            $('#searchModal').modal('show').on('shown.bs.modal', function () {
+                document.getElementById('searchInput').focus();
             });
         });
     }
@@ -142,7 +142,6 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         });
     }
-}
 
     document.getElementById('searchCloseBtn')?.addEventListener('click', () => {
         $('#searchModal').modal('hide');
