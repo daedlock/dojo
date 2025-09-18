@@ -10,14 +10,54 @@ let
 
     export TERM=xterm-256color
 
-    # Setup fish configuration with oh-my-fish and chain theme
+    # Setup fish configuration (only if it doesn't exist)
     mkdir -p /home/hacker/.config/fish
-    cat > /home/hacker/.config/fish/config.fish << 'EOF'
+
+    # Always create our default config as .orig for reference
+    cat > /home/hacker/.config/fish/config.fish.orig << 'EOF'
+# Disable fish greeting
+set fish_greeting
+
+# Install oh-my-fish and theme if not already installed
+if not test -d ~/.local/share/omf
+    curl https://raw.githubusercontent.com/oh-my-fish/oh-my-fish/master/bin/install > install
+    fish install --path=~/.local/share/omf --config=~/.config/omf
+    omf reload
+    omf install bobthefish
+    omf theme bobthefish
+end
+
 # Basic aliases
 alias ll="ls -la"
 alias l="eza -lah --icons --group-directories-first"
 alias v="nvim"
+
+# Fast file opener with fzf
+function o --description 'Open file with fzf'
+    # Use fd for faster file finding with common exclusions
+    set -l selected (fd -t f -H -E .git -E node_modules -E .cache | \
+                     fzf --preview 'bat --color=always --style=numbers --line-range=:100 {} 2>/dev/null || head -100 {}' \
+                         --preview-window='right:50%:wrap' \
+                         --bind='ctrl-/:toggle-preview' \
+                         --height=80% \
+                         --layout=reverse)
+
+    # Only open if a file was selected
+    if test -n "$selected"
+        v $selected
+    end
+end
+
+# Bind Ctrl+O to the o function
+bind \co 'o; commandline -f repaint'
+
+neofetch
 EOF
+
+    # Only create config.fish if it doesn't exist
+    if [ ! -f /home/hacker/.config/fish/config.fish ]; then
+      cp /home/hacker/.config/fish/config.fish.orig /home/hacker/.config/fish/config.fish
+    fi
     chown -R hacker:hacker /home/hacker/.config
 
     # Everforest Dark theme colors
@@ -62,6 +102,7 @@ EOF
         -t 'scrollOnKey=true' \
         -t 'scrollOnOutput=true' \
         -t 'scrollSensitivity=1' \
+        -t 'rendererType=webgl' \
         ${pkgs.fish}/bin/fish --login
 
     until ${pkgs.curl}/bin/curl -fs localhost:7681 >/dev/null; do sleep 0.1; done
@@ -94,6 +135,8 @@ in pkgs.stdenv.mkDerivation {
     eza
     # Nerd Font for icons
     nerd-fonts.jetbrains-mono
+    # System info
+    neofetch
   ];
   dontUnpack = true;
 
@@ -114,6 +157,7 @@ in pkgs.stdenv.mkDerivation {
     ln -s ${pkgs.fd}/bin/fd $out/bin/fd
     ln -s ${pkgs.bat}/bin/bat $out/bin/bat
     ln -s ${pkgs.eza}/bin/eza $out/bin/eza
+    ln -s ${pkgs.neofetch}/bin/neofetch $out/bin/neofetch
 
     runHook postInstall
   '';
