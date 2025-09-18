@@ -1,0 +1,52 @@
+#!/bin/bash
+
+function usage {
+    echo "Usage: $0 [-w]"
+    echo ""
+    echo "  -w  rebuild workspace (removes workspace data to force rebuild)"
+    exit
+}
+
+REBUILD_WORKSPACE=false
+export DOJO_PATH="./"
+export DATA_PATH="./data"
+
+while getopts "wh" opt; do
+    case $opt in
+    w)
+        REBUILD_WORKSPACE=true
+        ;;
+    h)
+        usage
+        ;;
+    \?)
+        echo "Invalid option: -$OPTARG" >&2
+        usage
+        ;;
+    esac
+done
+
+if [ "$REBUILD_WORKSPACE" = true ]; then
+    echo "Rebuilding workspace: removing workspace data..."
+    sleep 10
+    # Build workspace with new dojo
+    docker exec dojo bash -c "export DOJO_WORKSPACE=core && docker compose --profile workspace up workspace-builder --force-recreate"
+
+    # Restart any user containers
+    docker exec dojo docker ps -q --filter "name=user_" | xargs -r docker exec dojo docker restart
+fi
+
+docker stop dojo
+docker rm dojo
+docker run \
+    --name dojo \
+    --privileged \
+    --device=/dev/kvm:/dev/kvm \
+    -v "${DOJO_PATH}:/opt/pwn.college" \
+    -v "${DATA_PATH}:/data" \
+    -p 23:22 \
+    -p 80:80 \
+    -p 443:443 \
+    -e INTERNET_FOR_ALL=True \
+    -d \
+    pwncollege/dojo
