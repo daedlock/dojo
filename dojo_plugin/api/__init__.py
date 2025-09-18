@@ -1,4 +1,4 @@
-from flask import Blueprint, current_app
+from flask import Blueprint, current_app, make_response, request
 from flask_restx import Api
 
 from ..utils.request_logging import log_exception
@@ -16,6 +16,28 @@ from .v1.search import search_namespace
 from .v1.test_error import test_error_namespace
 
 api = Blueprint("pwncollege_api", __name__)
+
+# Add CORS headers to all responses
+@api.after_request
+def after_request(response):
+    # Always allow localhost:5173 for development
+    response.headers['Access-Control-Allow-Origin'] = 'http://localhost:5173'
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+    response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, PATCH, DELETE, OPTIONS'
+    response.headers['Access-Control-Allow-Credentials'] = 'true'
+    return response
+
+# Handle OPTIONS preflight requests
+@api.before_request
+def handle_preflight():
+    if request.method == "OPTIONS":
+        response = make_response()
+        response.headers['Access-Control-Allow-Origin'] = 'http://localhost:5173'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+        response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, PATCH, DELETE, OPTIONS'
+        response.headers['Access-Control-Allow-Credentials'] = 'true'
+        response.headers['Access-Control-Max-Age'] = '3600'
+        return response
 
 
 api_v1 = Api(api, version="v1", doc=current_app.config.get("SWAGGER_UI"))
