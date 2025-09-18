@@ -141,7 +141,7 @@ def start_container(docker_client, user, as_user, user_mounts, dojo_challenge, p
         environment={
             "HOME": "/home/hacker",
             "PATH": env_path,
-            "SHELL": f"{dojo_bin_path}/zsh",
+            "SHELL": f"{dojo_bin_path}/fish",
             "DOJO_AUTH_TOKEN": auth_token,
         },
         labels={
@@ -347,6 +347,48 @@ def docker_locked(func):
         except redis.exceptions.LockError:
             return {"success": False, "error": "Already starting a challenge; try again in 20 seconds."}
     return wrapper
+
+
+@docker_namespace.route("/module-challenges")
+class ModuleChallenges(Resource):
+    @authed_only
+    def get(self):
+        dojo_challenge = get_current_dojo_challenge()
+        if not dojo_challenge:
+            return {"success": False, "error": "No active challenge"}
+
+        user = get_current_user()
+
+        # Get all challenges in the current module
+        module_challenges = DojoChallenges.query.filter_by(
+            dojo_id=dojo_challenge.dojo_id,
+            module_index=dojo_challenge.module_index
+        ).order_by(DojoChallenges.challenge_index).all()
+
+        # Get user's solves for these challenges
+        solved_ids = set()
+        if user:
+            solves = Solves.query.filter_by(user_id=user.id).all()
+            solved_ids = {solve.challenge_id for solve in solves}
+
+        challenges_data = []
+        for challenge in module_challenges:
+            challenges_data.append({
+                "id": challenge.challenge_id,
+                "name": challenge.name,
+                "challenge_index": challenge.challenge_index,
+                "is_current": challenge.challenge_id == dojo_challenge.challenge_id,
+                "is_solved": challenge.challenge_id in solved_ids,
+                "dojo": dojo_challenge.dojo.reference_id,
+                "module": dojo_challenge.module.id,
+                "challenge": challenge.id
+            })
+
+        return {
+            "success": True,
+            "challenges": challenges_data,
+            "current_index": dojo_challenge.challenge_index
+        }
 
 
 @docker_namespace.route("/next")
