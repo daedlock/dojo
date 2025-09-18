@@ -10,22 +10,17 @@ let
 
     export TERM=xterm-256color
 
-    # Setup fish configuration (only if it doesn't exist)
+    # Setup fish configuration
     mkdir -p /home/hacker/.config/fish
 
-    # Always create our default config as .orig for reference
+    # Create our default config
     cat > /home/hacker/.config/fish/config.fish.orig << 'EOF'
-# Disable fish greeting
-set fish_greeting
 
-# Install oh-my-fish and theme if not already installed
-if not test -d ~/.local/share/omf
-    curl https://raw.githubusercontent.com/oh-my-fish/oh-my-fish/master/bin/install > install
-    fish install --path=~/.local/share/omf --config=~/.config/omf
-    omf reload
-    omf install bobthefish
-    omf theme bobthefish
+if status is-interactive
+    # Commands to run in interactive sessions can go here
+    set fish_greeting
 end
+
 
 # Basic aliases
 alias ll="ls -la"
@@ -54,9 +49,9 @@ bind \co 'o; commandline -f repaint'
 neofetch
 EOF
 
-    # Only create config.fish if it doesn't exist
+    # Use our config if user doesn't have one
     if [ ! -f /home/hacker/.config/fish/config.fish ]; then
-      cp /home/hacker/.config/fish/config.fish.orig /home/hacker/.config/fish/config.fish
+        cp /home/hacker/.config/fish/config.fish.orig /home/hacker/.config/fish/config.fish
     fi
     chown -R hacker:hacker /home/hacker/.config
 

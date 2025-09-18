@@ -80,18 +80,22 @@ def main():
 
         if status != "running":
             attempts += 1
-            print("\033c", end="")
-            print("\r", " " * 80, f"\rConnecting -- instance status: {status}", end="")
+            # Clear screen content but preserve terminal attributes
+            if attempts == 1:
+                print("\033[2J\033[H", end="")  # Clear screen and move cursor to top
+            print("\r\033[K", end="")
+            print(f"Connecting -- instance status: {status}", end="", flush=True)
             time.sleep(1)
             continue
 
         attempts = 0
-        print("\r", " " * 80, "\rConnected!")
+        print("\r\033[K", end="")
+        print("Connected!", flush=True)
 
         if not os.fork():
             ssh_entrypoint = "/run/dojo/bin/ssh-entrypoint"
             if is_mac:
-                cmd = f"/bin/bash -c {shlex.quote(original_command)}" if original_command  else "zsh -i"
+                cmd = f"/bin/bash -c {shlex.quote(original_command)}" if original_command  else "fish -i"
                 container.execve_shell(cmd, user="1000", use_tty=tty)
             else:
                 command = [ssh_entrypoint, "-c", original_command] if original_command else [ssh_entrypoint]
@@ -118,11 +122,13 @@ def main():
             _, status = os.wait()
             if simple or status == 0:
                 break
-            print()
-            print("\r", " " * 80, "\rConnecting", end="")
+            # Clear screen when reconnecting
+            print("\033[2J\033[H", end="")  # Clear screen and move cursor to top
+            print("Reconnecting...", end="", flush=True)
             time.sleep(0.5)
     else:
-        print("\r", " " * 80, "\rError: failed to connect!")
+        print("\r\033[K", end="")
+        print("Error: failed to connect!")
 
 
 if __name__ == "__main__":
