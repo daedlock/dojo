@@ -485,56 +485,67 @@ $(() => {
             event.preventDefault();
             const challengeId = $(this).find("#current-challenge-id").val();
             if (challengeId) {
-                // Get current challenge context and start next challenge
-                fetch('/pwncollege_api/v1/docker')
+                // First, get the current challenge info
+                CTFd.fetch('/pwncollege_api/v1/docker')
                     .then(response => response.json())
-                    .then(dockerData => {
-                        if (dockerData.success && dockerData.dojo && dockerData.module && dockerData.challenge) {
-                            const currentChallengeNum = parseInt(dockerData.challenge);
-                            const nextChallengeNum = currentChallengeNum + 1;
-                            const practice = dockerData.practice || false;
+                    .then(currentData => {
+                        if (!currentData.success) {
+                            animateBanner(event, "No active challenge", "warn");
+                            return;
+                        }
 
-                            // Start the next challenge
-                            const startParams = {
-                                "dojo": dockerData.dojo,
-                                "module": dockerData.module,
-                                "challenge": nextChallengeNum,
-                                "practice": practice
-                            };
+                        const practice = currentData.practice || false;
 
-                            animateBanner(event, "Starting next challenge...", "info");
-
-                            fetch('/pwncollege_api/v1/docker', {
-                                method: 'POST',
-                                credentials: 'same-origin',
-                                headers: {
-                                    'Accept': 'application/json',
-                                    'Content-Type': 'application/json'
-                                },
-                                body: JSON.stringify(startParams)
-                            })
+                        // Get next challenge info
+                        CTFd.fetch('/pwncollege_api/v1/docker/next')
                             .then(response => response.json())
-                            .then(result => {
-                                if (result.success !== false) {
-                                    // Success - navigate to workspace
-                                    window.location.href = '/workspace';
-                                } else {
-                                    // Show error or navigate to module if next challenge doesn't exist
-                                    const moduleUrl = `/dojos/${dockerData.dojo}/${dockerData.module}#challenge-${nextChallengeNum}`;
-                                    window.location.href = moduleUrl;
+                            .then(nextData => {
+                                if (!nextData.success) {
+                                    animateBanner(event, nextData.error || "No next challenge available", "warn");
+                                    return;
                                 }
+
+                                // Start the next challenge
+                                const startParams = {
+                                    "dojo": nextData.dojo,
+                                    "module": nextData.module,
+                                    "challenge": nextData.challenge,
+                                    "practice": practice
+                                };
+
+                                animateBanner(event, nextData.new_module ? "Starting first challenge of next module..." : "Starting next challenge...", "success");
+
+                                CTFd.fetch('/pwncollege_api/v1/docker', {
+                                    method: 'POST',
+                                    credentials: 'same-origin',
+                                    headers: {
+                                        'Accept': 'application/json',
+                                        'Content-Type': 'application/json'
+                                    },
+                                    body: JSON.stringify(startParams)
+                                })
+                                .then(response => response.json())
+                                .then(result => {
+                                    if (result.success !== false) {
+                                        // Success - reload workspace to show new challenge
+                                        window.location.reload();
+                                    } else {
+                                        animateBanner(event, result.error || "Failed to start next challenge", "error");
+                                    }
+                                })
+                                .catch(error => {
+                                    console.error('Error starting next challenge:', error);
+                                    animateBanner(event, "Error starting next challenge", "error");
+                                });
                             })
                             .catch(error => {
-                                console.error('Error starting next challenge:', error);
-                                animateBanner(event, "Error starting next challenge", "warn");
+                                console.error('Error fetching next challenge info:', error);
+                                animateBanner(event, "Error getting next challenge info", "error");
                             });
-                        } else {
-                            animateBanner(event, "Cannot determine current challenge", "warn");
-                        }
                     })
                     .catch(error => {
-                        console.error('Error fetching docker info:', error);
-                        animateBanner(event, "Error getting challenge info", "warn");
+                        console.error('Error fetching current challenge info:', error);
+                        animateBanner(event, "Error getting current challenge info", "error");
                     });
             } else {
                 animateBanner(event, "No active challenge", "warn");
