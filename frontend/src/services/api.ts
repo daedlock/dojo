@@ -1,4 +1,6 @@
-export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost/pwncollege_api/v1'
+// Base URLs for different API types
+export const CTFD_API_BASE_URL = import.meta.env.VITE_CTFD_API_URL || 'http://localhost/api/v1'
+export const DOJO_API_BASE_URL = import.meta.env.VITE_DOJO_API_URL || 'http://localhost/pwncollege_api/v1'
 
 export interface ApiResponse<T> {
   data?: T
@@ -24,17 +26,17 @@ class ApiClient {
 
   constructor(baseUrl: string) {
     this.baseUrl = baseUrl
-    this.token = localStorage.getItem('auth_token')
+    this.token = localStorage.getItem('ctfd_token')
   }
 
   setToken(token: string) {
     this.token = token
-    localStorage.setItem('auth_token', token)
+    localStorage.setItem('ctfd_token', token)
   }
 
   clearToken() {
     this.token = null
-    localStorage.removeItem('auth_token')
+    localStorage.removeItem('ctfd_token')
   }
 
   private async request<T>(
@@ -64,6 +66,13 @@ class ApiClient {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))
+
+        // If the response has a 'success' field, it's a structured response
+        // even if the HTTP status is not 2xx (common with auth endpoints)
+        if ('success' in errorData) {
+          return errorData as T
+        }
+
         throw new ApiError(
           errorData.message || `HTTP ${response.status}`,
           response.status,
@@ -115,4 +124,9 @@ class ApiClient {
   }
 }
 
-export const apiClient = new ApiClient(API_BASE_URL)
+// Create separate API clients
+export const ctfdApiClient = new ApiClient(CTFD_API_BASE_URL)
+export const dojoApiClient = new ApiClient(DOJO_API_BASE_URL)
+
+// Keep the default client pointing to dojo API for backwards compatibility
+export const apiClient = dojoApiClient

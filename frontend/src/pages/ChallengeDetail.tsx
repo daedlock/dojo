@@ -3,11 +3,17 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Markdown } from '@/components/ui/markdown'
-import { useDojoModules, useDojoSolves, useChallengeDescription } from '@/hooks/useDojo'
-import { ArrowLeft, CheckCircle, Circle, Play, Terminal, Flag, Loader2 } from 'lucide-react'
+import { useDojoModules, useDojoSolves, useChallengeDescription, useStartChallenge } from '@/hooks/useDojo'
+import { useWorkspace } from '@/hooks/useWorkspace'
+import { ArrowLeft, CheckCircle, Circle, Play, Terminal, Flag, Loader2, AlertCircle, Code, Monitor, AlertTriangle } from 'lucide-react'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { useState } from 'react'
 
 export default function ChallengeDetail() {
   const { dojoId, moduleId, challengeId } = useParams()
+  const [challengeStarted, setChallengeStarted] = useState(false)
+  const [startError, setStartError] = useState<string | null>(null)
+  const [activeService, setActiveService] = useState<string>('terminal')
   
   const { 
     data: modulesData, 
@@ -19,15 +25,53 @@ export default function ChallengeDetail() {
     data: solvesData 
   } = useDojoSolves(dojoId || '', undefined, !!dojoId && !!moduleId && !!challengeId)
   
-  const { 
-    data: descriptionData, 
-    isLoading: isLoadingDescription 
+  const {
+    data: descriptionData,
+    isLoading: isLoadingDescription
   } = useChallengeDescription(
-    dojoId || '', 
-    moduleId || '', 
+    dojoId || '',
+    moduleId || '',
     challengeId || '',
     !!dojoId && !!moduleId && !!challengeId
   )
+
+  const startChallengeMutation = useStartChallenge()
+
+  // Workspace queries
+  const {
+    data: workspaceStatus
+  } = useWorkspace({}, challengeStarted)
+
+  const {
+    data: workspaceData,
+    isLoading: isLoadingService
+  } = useWorkspace({ service: activeService }, challengeStarted && workspaceStatus?.active)
+
+  // Check if workspace challenge matches current challenge
+  const isWorkspaceChallengeMismatch = workspaceStatus?.current_challenge && (
+    workspaceStatus.current_challenge.dojo_id !== dojoId ||
+    workspaceStatus.current_challenge.module_id !== moduleId ||
+    workspaceStatus.current_challenge.challenge_id !== challengeId
+  )
+
+  const handleStartChallenge = async () => {
+    if (!dojoId || !moduleId || !challengeId) return
+
+    setStartError(null)
+
+    try {
+      await startChallengeMutation.mutateAsync({
+        dojoId,
+        moduleId,
+        challengeId,
+        practice: false
+      })
+      setChallengeStarted(true)
+    } catch (error: any) {
+      console.error('Failed to start challenge:', error)
+      setStartError(error?.response?.data?.error || error?.message || 'Failed to start challenge')
+    }
+  }
 
   if (!dojoId || !moduleId || !challengeId) {
     return (
@@ -150,6 +194,100 @@ export default function ChallengeDetail() {
               </CardContent>
             </Card>
 
+            {/* Challenge mismatch warning */}
+            {isWorkspaceChallengeMismatch && (
+              <Card className="border-orange-200 bg-orange-50">
+                <CardContent className="pt-6">
+                  <Alert className="border-orange-200 bg-orange-50">
+                    <AlertTriangle className="h-4 w-4 text-orange-600" />
+                    <AlertDescription className="text-orange-800">
+                      <strong>Warning:</strong> Your workspace is currently running a different challenge:
+                      <span className="font-mono ml-1">
+                        {workspaceStatus?.current_challenge?.challenge_name}
+                      </span>
+                      <br />
+                      <span className="text-sm mt-1 block">
+                        Start this challenge to switch your workspace environment.
+                      </span>
+                    </AlertDescription>
+                  </Alert>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Workspace iframe */}
+            {challengeStarted && workspaceStatus?.active && workspaceData?.iframe_src && !isWorkspaceChallengeMismatch && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    {activeService === 'terminal' && <Terminal className="h-5 w-5" />}
+                    {activeService === 'code' && <Code className="h-5 w-5" />}
+                    {activeService === 'desktop' && <Monitor className="h-5 w-5" />}
+                    Workspace - {activeService === 'terminal' ? 'Terminal' : activeService === 'code' ? 'Code Editor' : 'Desktop'}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-0">
+                  {isLoadingService ? (
+                    <div className="flex items-center justify-center h-96 text-muted-foreground">
+                      <Loader2 className="h-6 w-6 animate-spin mr-2" />
+                      Loading {activeService}...
+                    </div>
+                  ) : (
+                    <iframe
+                      src={workspaceData.iframe_src.startsWith('/') ? `http://localhost${workspaceData.iframe_src}` : workspaceData.iframe_src}
+                      className="w-full h-96 border-0 rounded-b-lg"
+                      title={`Workspace ${activeService}`}
+                    />
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Workspace iframe for different challenge */}
+            {isWorkspaceChallengeMismatch && workspaceStatus?.active && workspaceData?.iframe_src && (
+              <Card className="border-orange-200">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-orange-700">
+                    {activeService === 'terminal' && <Terminal className="h-5 w-5" />}
+                    {activeService === 'code' && <Code className="h-5 w-5" />}
+                    {activeService === 'desktop' && <Monitor className="h-5 w-5" />}
+                    <span className="truncate">
+                      Workspace - {workspaceStatus.current_challenge?.challenge_name}
+                    </span>
+                    <Badge variant="outline" className="text-orange-600 border-orange-300">
+                      Different Challenge
+                    </Badge>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-0">
+                  {isLoadingService ? (
+                    <div className="flex items-center justify-center h-96 text-muted-foreground">
+                      <Loader2 className="h-6 w-6 animate-spin mr-2" />
+                      Loading {activeService}...
+                    </div>
+                  ) : (
+                    <iframe
+                      src={workspaceData.iframe_src.startsWith('/') ? `http://localhost${workspaceData.iframe_src}` : workspaceData.iframe_src}
+                      className="w-full h-96 border-0 rounded-b-lg opacity-80"
+                      title={`Workspace ${activeService} (Different Challenge)`}
+                    />
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+            {challengeStarted && workspaceStatus?.active === false && (
+              <Card>
+                <CardContent className="text-center py-8">
+                  <div className="text-muted-foreground">
+                    <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+                    <p>Preparing your workspace...</p>
+                    <p className="text-sm mt-2">This may take a few moments.</p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -178,14 +316,108 @@ export default function ChallengeDetail() {
                 <CardTitle>Actions</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <Button className="w-full" size="lg">
-                  <Play className="h-4 w-4 mr-2" />
-                  Start Challenge
+                {startError && (
+                  <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>{startError}</AlertDescription>
+                  </Alert>
+                )}
+
+                {challengeStarted && (
+                  <Alert>
+                    <CheckCircle className="h-4 w-4" />
+                    <AlertDescription>
+                      Challenge started successfully! Your workspace is being prepared.
+                    </AlertDescription>
+                  </Alert>
+                )}
+
+                <Button
+                  className="w-full"
+                  size="lg"
+                  onClick={handleStartChallenge}
+                  disabled={startChallengeMutation.isPending}
+                >
+                  {startChallengeMutation.isPending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Starting...
+                    </>
+                  ) : (
+                    <>
+                      <Play className="h-4 w-4 mr-2" />
+                      Start Challenge
+                    </>
+                  )}
                 </Button>
-                <Button variant="outline" className="w-full">
-                  <Terminal className="h-4 w-4 mr-2" />
-                  Open Terminal
-                </Button>
+                {/* Workspace Service Buttons */}
+                {challengeStarted && workspaceStatus?.active && !isWorkspaceChallengeMismatch && (
+                  <div className="space-y-2">
+                    <div className="text-sm font-medium text-muted-foreground">Workspace</div>
+                    <div className="grid grid-cols-3 gap-2">
+                      <Button
+                        variant={activeService === 'terminal' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setActiveService('terminal')}
+                      >
+                        <Terminal className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant={activeService === 'code' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setActiveService('code')}
+                      >
+                        <Code className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant={activeService === 'desktop' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setActiveService('desktop')}
+                      >
+                        <Monitor className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Workspace Service Buttons for different challenge */}
+                {isWorkspaceChallengeMismatch && workspaceStatus?.active && (
+                  <div className="space-y-2">
+                    <div className="text-sm font-medium text-orange-600">
+                      Workspace ({workspaceStatus.current_challenge?.challenge_name})
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      <Button
+                        variant={activeService === 'terminal' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setActiveService('terminal')}
+                        className="opacity-60"
+                      >
+                        <Terminal className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant={activeService === 'code' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setActiveService('code')}
+                        className="opacity-60"
+                      >
+                        <Code className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant={activeService === 'desktop' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setActiveService('desktop')}
+                        className="opacity-60"
+                      >
+                        <Monitor className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <div className="text-xs text-orange-600 text-center">
+                      Different challenge workspace
+                    </div>
+                  </div>
+                )}
+
                 {isSolved && (
                   <div className="text-center text-sm text-muted-foreground">
                     ✓ Challenge completed!

@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { dojoService, type CreateDojoData, type SolveSubmission, type SurveyResponse } from '@/services/dojo'
+import { dojoApiClient } from '@/services/api'
 import { queryKeys } from '@/lib/queryClient'
 
 // Get all dojos
@@ -157,5 +158,27 @@ export function usePromoteDojo() {
 export function usePruneAwards() {
   return useMutation({
     mutationFn: (dojoId: string) => dojoService.pruneAwards(dojoId),
+  })
+}
+
+export function useStartChallenge() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ dojoId, moduleId, challengeId, practice = false }: {
+      dojoId: string
+      moduleId: string
+      challengeId: string
+      practice?: boolean
+    }) => dojoApiClient.post('/docker', {
+      dojo: dojoId,
+      module: moduleId,
+      challenge: challengeId,
+      practice
+    }),
+    onSuccess: () => {
+      // Invalidate workspace queries to refetch state
+      queryClient.invalidateQueries({ queryKey: ['workspace'] })
+    },
   })
 }

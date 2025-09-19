@@ -1,5 +1,5 @@
 import { Link, useParams } from 'react-router-dom'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Markdown } from '@/components/ui/markdown'
@@ -15,9 +15,8 @@ export default function ModuleDetail() {
     error: modulesError 
   } = useDojoModules(dojoId || '', !!dojoId && !!moduleId)
   
-  const { 
-    data: solvesData, 
-    isLoading: isLoadingSolves 
+  const {
+    data: solvesData
   } = useDojoSolves(dojoId || '', undefined, !!dojoId && !!moduleId)
 
   if (!dojoId || !moduleId) {

@@ -1,4 +1,4 @@
-import { apiClient } from './api'
+import { dojoApiClient } from './api'
 
 export interface WorkspaceResponse {
   success: boolean
@@ -6,6 +6,12 @@ export interface WorkspaceResponse {
   iframe_src?: string
   service?: string
   error?: string
+  current_challenge?: {
+    dojo_id: string
+    module_id: string
+    challenge_id: string
+    challenge_name: string
+  }
 }
 
 class WorkspaceService {
@@ -21,12 +27,12 @@ class WorkspaceService {
     if (params.service) searchParams.append('service', params.service)
 
     const query = searchParams.toString()
-    return apiClient.get<WorkspaceResponse>(`/api/v1/workspace${query ? '?' + query : ''}`)
+    return dojoApiClient.get<WorkspaceResponse>(`/workspace${query ? '?' + query : ''}`)
   }
 
   // Reset user's home directory
   async resetHome(): Promise<{ success: boolean; error?: string; message?: string }> {
-    return apiClient.post('/api/v1/workspace/reset_home')
+    return dojoApiClient.post('/workspace/reset_home')
   }
 }
 

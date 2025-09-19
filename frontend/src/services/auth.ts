@@ -1,18 +1,18 @@
-import { apiClient } from './api'
-import type { AuthResponse, User } from '@/types/api'
+import { ctfdApiClient } from './api'
 
 export interface LoginCredentials {
   name: string  // username or email
   password: string
+  remember_me?: boolean
 }
 
 export interface RegisterData {
   name: string
   email: string
   password: string
-  website?: string
   affiliation?: string
   country?: string
+  [key: string]: any // For custom fields like 'fields[1]'
 }
 
 export interface ResetPasswordData {
@@ -20,69 +20,112 @@ export interface ResetPasswordData {
 }
 
 export interface ChangePasswordData {
-  current_password: string
-  new_password: string
-  confirm_password: string
+  currentPassword: string
+  newPassword: string
+}
+
+export interface AuthResponse {
+  success: boolean
+  data?: {
+    token: string
+    user_id: number
+    username: string
+    email: string
+    type: string
+    verified: boolean
+    team_id?: number
+  }
+  errors?: string[]
+  message?: string
 }
 
 class AuthService {
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
-    const response = await apiClient.post<AuthResponse>('/api/v1/login', credentials)
-    
-    if (response.success && response.token) {
-      apiClient.setToken(response.token)
+    const response = await ctfdApiClient.post<AuthResponse>('/auth/login', credentials)
+
+    if (response.success && response.data?.token) {
+      ctfdApiClient.setToken(response.data.token)
+      // Store user data locally
+      localStorage.setItem('ctfd_user', JSON.stringify(response.data))
     }
-    
+
     return response
   }
 
   async register(data: RegisterData): Promise<AuthResponse> {
-    return apiClient.post<AuthResponse>('/api/v1/register', data)
-  }
+    const response = await ctfdApiClient.post<AuthResponse>('/auth/register', data)
 
-  async logout(): Promise<{ success: boolean }> {
-    const response = await apiClient.post<{ success: boolean }>('/api/v1/logout')
-    apiClient.clearToken()
+    if (response.success && response.data?.token) {
+      ctfdApiClient.setToken(response.data.token)
+      // Store user data locally
+      localStorage.setItem('ctfd_user', JSON.stringify(response.data))
+    }
+
     return response
   }
 
-  async getCurrentUser(): Promise<{ user: User; success: boolean }> {
-    return apiClient.get<{ user: User; success: boolean }>('/api/v1/me')
+  async logout(): Promise<{ success: boolean }> {
+    ctfdApiClient.clearToken()
+    localStorage.removeItem('ctfd_user')
+    return { success: true }
   }
 
-  async updateProfile(data: Partial<User>): Promise<{ user: User; success: boolean }> {
-    return apiClient.patch<{ user: User; success: boolean }>('/api/v1/me', data)
+  async forgotPassword(email: string): Promise<{ success: boolean; message?: string; errors?: string[] }> {
+    return ctfdApiClient.post<{ success: boolean; message?: string; errors?: string[] }>('/auth/forgot-password', { email })
   }
 
-  async changePassword(data: ChangePasswordData): Promise<{ success: boolean; message?: string }> {
-    return apiClient.patch<{ success: boolean; message?: string }>('/api/v1/me/password', data)
-  }
-
-  async resetPassword(data: ResetPasswordData): Promise<{ success: boolean; message?: string }> {
-    return apiClient.post<{ success: boolean; message?: string }>('/api/v1/reset-password', data)
-  }
-
-  async confirmResetPassword(token: string, password: string): Promise<{ success: boolean; message?: string }> {
-    return apiClient.post<{ success: boolean; message?: string }>('/api/v1/reset-password/confirm', {
-      token,
-      password
-    })
+  async resetPassword(token: string, password: string): Promise<{ success: boolean; message?: string }> {
+    return ctfdApiClient.post<{ success: boolean; message?: string }>(`/auth/reset-password/${token}`, { password })
   }
 
   async verifyEmail(token: string): Promise<{ success: boolean; message?: string }> {
-    return apiClient.post<{ success: boolean; message?: string }>('/api/v1/verify-email', { token })
-  }
-
-  async resendVerification(): Promise<{ success: boolean; message?: string }> {
-    return apiClient.post<{ success: boolean; message?: string }>('/api/v1/verify-email/resend')
+    return ctfdApiClient.get<{ success: boolean; message?: string }>(`/auth/verify/${token}`)
   }
 
   isAuthenticated(): boolean {
-    return !!localStorage.getItem('auth_token')
+    return !!localStorage.getItem('ctfd_token')
   }
 
   getToken(): string | null {
-    return localStorage.getItem('auth_token')
+    return localStorage.getItem('ctfd_token')
+  }
+
+  getCurrentUser() {
+    if (!this.isAuthenticated()) {
+      return null
+    }
+
+    try {
+      const userData = localStorage.getItem('ctfd_user')
+      if (userData) {
+        return JSON.parse(userData)
+      }
+      return null
+    } catch (error) {
+      // If parsing fails, clear the invalid data
+      localStorage.removeItem('ctfd_user')
+      return null
+    }
+  }
+
+  async updateProfile(data: any): Promise<{ success: boolean; user?: any }> {
+    const response = await ctfdApiClient.patch<{ success: boolean; user?: any }>('/users/me', data)
+    if (response.success && response.user) {
+      localStorage.setItem('ctfd_user', JSON.stringify(response.user))
+    }
+    return response
+  }
+
+  async changePassword(data: ChangePasswordData): Promise<{ success: boolean; message?: string }> {
+    return ctfdApiClient.post<{ success: boolean; message?: string }>('/users/me/password', data)
+  }
+
+  async confirmResetPassword(token: string, password: string): Promise<{ success: boolean; message?: string }> {
+    return ctfdApiClient.post<{ success: boolean; message?: string }>(`/auth/reset/${token}`, { password })
+  }
+
+  async resendVerification(): Promise<{ success: boolean; message?: string }> {
+    return ctfdApiClient.post<{ success: boolean; message?: string }>('/auth/resend-verification', {})
   }
 }
 

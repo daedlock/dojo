@@ -1,4 +1,4 @@
-import { apiClient } from './api'
+import { apiClient, ctfdApiClient } from './api'
 
 export interface DojoListResponse {
   success: boolean
@@ -7,6 +7,13 @@ export interface DojoListResponse {
     name: string
     description?: string
     official: boolean
+    award?: {
+      belt?: string
+      emoji?: string
+    }
+    modules: number
+    challenges: number
+    active_hackers: number
   }>
 }
 
@@ -93,13 +100,15 @@ class DojoService {
     return apiClient.get<DojoCourseResponse>(`/dojos/${dojoId}/course`)
   }
 
-  // Submit solution for a challenge
+  // Submit solution for a challenge using dojo solve endpoint
   async submitChallengeSolution(
-    dojoId: string, 
-    moduleId: string, 
-    challengeId: string, 
+    dojoId: string,
+    moduleId: string,
+    challengeId: string,
     submission: SolveSubmission
   ): Promise<{ success: boolean; status?: string; error?: string }> {
+    console.log('Submitting to dojo solve endpoint...')
+
     return apiClient.post(`/dojos/${dojoId}/${moduleId}/${challengeId}/solve`, submission)
   }
 
