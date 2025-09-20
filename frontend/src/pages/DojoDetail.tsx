@@ -1,11 +1,13 @@
-import { useState } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { useDojoModules, useDojoSolves, useDojos } from '@/hooks/useDojo'
+import { useDojoStore } from '@/stores'
 import { Markdown } from '@/components/ui/markdown'
 import { Loader2, AlertCircle, ArrowLeft, BookOpen, Users, Trophy, Clock, Target, Play, CheckCircle, ChevronRight, Activity, Zap } from 'lucide-react'
+import { motion } from 'framer-motion'
+import { shallow } from 'zustand/shallow'
 
 export default function DojoDetail() {
   const { dojoId } = useParams()
@@ -16,21 +18,32 @@ export default function DojoDetail() {
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false)
 
 
-  const {
-    data: dojosData,
-    isLoading: isLoadingDojo,
-    error: dojoError
-  } = useDojos()
+  // Direct state access without complex selectors
+  const dojos = useDojoStore(state => state.dojos)
+  const modulesMap = useDojoStore(state => state.modules)
+  const solvesMap = useDojoStore(state => state.solves)
+  const isLoading = useDojoStore(state => state.loadingDojos || state.loadingModules[dojoId || ''])
+  const error = useDojoStore(state => state.dojoError || state.moduleError[dojoId || ''])
 
-  const {
-    data: modulesData,
-    isLoading: isLoadingModules,
-    error: modulesError
-  } = useDojoModules(dojoId || '', !!dojoId)
+  // Find data directly to avoid selector issues
+  const dojo = dojos.find(d => d.id === dojoId)
+  const modules = modulesMap[dojoId || ''] || []
+  const solves = solvesMap[`${dojoId}-all`] || []
 
-  const {
-    data: solvesData
-  } = useDojoSolves(dojoId || '', undefined, !!dojoId)
+  // Simple stats
+  const stats = {
+    totalChallenges: modules.reduce((acc, mod) => acc + (mod.challenges?.length || 0), 0),
+    totalSolves: solves.length,
+    uniqueHackers: new Set(solves.map(solve => solve.user_id)).size,
+    hackingNow: 0
+  }
+
+  useEffect(() => {
+    if (dojoId) {
+      useDojoStore.getState().fetchModules(dojoId)
+      useDojoStore.getState().fetchSolves(dojoId)
+    }
+  }, [dojoId])
 
 
 
@@ -48,7 +61,7 @@ export default function DojoDetail() {
     )
   }
 
-  if (isLoadingDojo || isLoadingModules) {
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-background text-foreground p-6 flex items-center justify-center">
         <div className="text-center">
@@ -59,7 +72,7 @@ export default function DojoDetail() {
     )
   }
 
-  if (dojoError || modulesError || !modulesData?.success) {
+  if (error) {
     return (
       <div className="min-h-screen bg-background text-foreground p-6 flex items-center justify-center">
         <div className="text-center">
@@ -74,29 +87,8 @@ export default function DojoDetail() {
     )
   }
 
-  const modules = modulesData.modules || []
-  const solves = solvesData?.solves || []
-  const dojo = dojosData?.dojos?.find(d => d.id === dojoId)
-
-  console.log('Debug DojoDetail:', { modules, modulesData, dojo, dojoId })
-
   // Create a set of solved challenge IDs for quick lookup
   const solvedChallengeIds = new Set(solves.map(solve => solve.challenge_id))
-
-  // Calculate course stats
-  const totalChallenges = modules.reduce((acc, mod) => acc + (mod.challenges?.length || 0), 0)
-  const totalSolves = solves.length // All solves across all users
-  const uniqueHackers = new Set(solves.map(solve => solve.user_id)).size
-
-  // Calculate "hacking now" based on recent activity (solves in last 24 hours)
-  const now = new Date()
-  const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000)
-  const recentSolves = solves.filter(solve => {
-    if (!solve.timestamp) return false
-    const solveDate = new Date(solve.timestamp)
-    return solveDate >= yesterday
-  })
-  const hackingNow = new Set(recentSolves.map(solve => solve.user_id)).size
 
 
   const getDojoIcon = (dojo: any) => {
@@ -129,7 +121,13 @@ export default function DojoDetail() {
 
   // Course overview page
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <motion.div
+      className="min-h-screen bg-background text-foreground"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+      transition={{ duration: 0.2, ease: [0.25, 0.46, 0.45, 0.94] }}
+    >
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="flex items-center gap-4 mb-8">
@@ -153,7 +151,7 @@ export default function DojoDetail() {
                 <Badge variant="default">Official</Badge>
               )}
               <Badge variant="outline">
-                {totalSolves} Total Solves
+                {stats.totalSolves} Total Solves
               </Badge>
               <Badge variant="secondary">
                 {modules.length} {modules.length === 1 ? 'Module' : 'Modules'}
@@ -205,7 +203,7 @@ export default function DojoDetail() {
                     <Trophy className="h-5 w-5 text-primary" />
                   </div>
                   <div>
-                    <div className="text-2xl font-bold tracking-tight text-foreground">{totalSolves.toLocaleString()}</div>
+                    <div className="text-2xl font-bold tracking-tight text-foreground">{stats.totalSolves.toLocaleString()}</div>
                     <div className="text-sm font-medium text-muted-foreground">Total Solves</div>
                   </div>
                 </div>
@@ -221,7 +219,7 @@ export default function DojoDetail() {
                     </div>
                   </div>
                   <div>
-                    <div className="text-2xl font-bold tracking-tight text-foreground">{hackingNow}</div>
+                    <div className="text-2xl font-bold tracking-tight text-foreground">{stats.hackingNow}</div>
                     <div className="text-sm font-medium text-muted-foreground">Hacking Now</div>
                   </div>
                 </div>
@@ -234,7 +232,7 @@ export default function DojoDetail() {
                     <Target className="h-5 w-5 text-blue-600" />
                   </div>
                   <div>
-                    <div className="text-2xl font-bold tracking-tight text-foreground">{totalChallenges}</div>
+                    <div className="text-2xl font-bold tracking-tight text-foreground">{stats.totalChallenges}</div>
                     <div className="text-sm font-medium text-muted-foreground">Challenges</div>
                   </div>
                 </div>
@@ -247,7 +245,7 @@ export default function DojoDetail() {
                     <Users className="h-5 w-5 text-purple-600" />
                   </div>
                   <div>
-                    <div className="text-2xl font-bold tracking-tight text-foreground">{uniqueHackers}</div>
+                    <div className="text-2xl font-bold tracking-tight text-foreground">{stats.uniqueHackers}</div>
                     <div className="text-sm font-medium text-muted-foreground">Unique Hackers</div>
                   </div>
                 </div>
@@ -370,6 +368,6 @@ export default function DojoDetail() {
           </Card>
         </div>
       </div>
-    </div>
+    </motion.div>
   )
 }

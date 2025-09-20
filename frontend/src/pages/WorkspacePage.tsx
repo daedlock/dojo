@@ -1,7 +1,6 @@
 import { useParams, useNavigate } from 'react-router-dom'
-import { useDojos, useDojoModules } from '@/hooks/useDojo'
+import { useDojoStore, useUIStore } from '@/stores'
 import { DojoWorkspaceLayout } from '@/components/layout/DojoWorkspaceLayout'
-import { HeaderProvider } from '@/contexts/HeaderContext'
 import { Loader2, AlertCircle, ArrowLeft } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -12,19 +11,37 @@ export default function WorkspacePage() {
   const navigate = useNavigate()
   const [isExiting, setIsExiting] = useState(false)
 
-  const {
-    data: dojosData,
-    isLoading: isLoadingDojo,
-    error: dojoError
-  } = useDojos()
+  // Direct state access to avoid selector issues
+  const dojos = useDojoStore(state => state.dojos)
+  const modulesMap = useDojoStore(state => state.modules)
+  const loadingDojos = useDojoStore(state => state.loadingDojos)
+  const loadingModules = useDojoStore(state => state.loadingModules)
+  const dojoError = useDojoStore(state => state.dojoError)
+  const moduleError = useDojoStore(state => state.moduleError)
 
-  const {
-    data: modulesData,
-    isLoading: isLoadingModules,
-    error: modulesError
-  } = useDojoModules(dojoId || '')
+  // Find data directly
+  const dojo = dojos.find(d => d.id === dojoId)
+  const modules = modulesMap[dojoId || ''] || []
 
-  if (isLoadingDojo || isLoadingModules) {
+  // Loading and error states
+  const isLoading = loadingDojos || loadingModules[dojoId || '']
+  const error = dojoError || moduleError[dojoId || '']
+
+  useEffect(() => {
+    if (dojoId) {
+      useDojoStore.getState().fetchModules(dojoId)
+    }
+  }, [dojoId])
+
+  // Cleanup effect to restore header state when leaving workspace
+  useEffect(() => {
+    return () => {
+      // Reset header state when component unmounts
+      useUIStore.getState().setHeaderHidden(false)
+    }
+  }, [])
+
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-background text-foreground p-6 flex items-center justify-center">
         <div className="text-center">
@@ -35,7 +52,7 @@ export default function WorkspacePage() {
     )
   }
 
-  if (dojoError || modulesError || !modulesData?.success) {
+  if (error) {
     return (
       <div className="min-h-screen bg-background text-foreground p-6 flex items-center justify-center">
         <div className="text-center">
@@ -49,9 +66,6 @@ export default function WorkspacePage() {
       </div>
     )
   }
-
-  const modules = modulesData.modules || []
-  const dojo = dojosData?.dojos?.find(d => d.id === dojoId)
 
   // Find the specific challenge
   const module = modules.find(m => m.id === moduleId)
@@ -92,6 +106,9 @@ export default function WorkspacePage() {
   }
 
   const handleChallengeClose = () => {
+    // Restore header state before exiting
+    useUIStore.getState().setHeaderHidden(false)
+
     // Start exit animation, then navigate
     setIsExiting(true)
     setTimeout(() => {
@@ -100,41 +117,39 @@ export default function WorkspacePage() {
   }
 
   return (
-    <HeaderProvider>
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={`workspace-${dojoId}-${moduleId}-${challengeId}`}
-          initial={{ opacity: 0, scale: 0.98, y: 20 }}
-          animate={{
-            opacity: isExiting ? 0 : 1,
-            scale: isExiting ? 0.98 : 1,
-            y: isExiting ? 20 : 0
+    <AnimatePresence mode="wait">
+      <motion.div
+        key={`workspace-${dojoId}-${moduleId}-${challengeId}`}
+        initial={{ opacity: 0, scale: 0.98, y: 20 }}
+        animate={{
+          opacity: isExiting ? 0 : 1,
+          scale: isExiting ? 0.98 : 1,
+          y: isExiting ? 20 : 0
+        }}
+        exit={{ opacity: 0, scale: 0.98, y: 20 }}
+        transition={{
+          duration: 0.2,
+          ease: [0.25, 0.46, 0.45, 0.94] // Custom ease for smooth feel
+        }}
+        className="h-screen w-full"
+      >
+        <DojoWorkspaceLayout
+          dojo={{
+            id: dojoId!,
+            name: dojo?.name || dojoId!,
+            description: dojo?.description
           }}
-          exit={{ opacity: 0, scale: 0.98, y: 20 }}
-          transition={{
-            duration: 0.2,
-            ease: [0.25, 0.46, 0.45, 0.94] // Custom ease for smooth feel
+          modules={layoutModules}
+          activeChallenge={{
+            dojoId: dojoId!,
+            moduleId: moduleId!,
+            challengeId: challengeId!,
+            name: challenge.name
           }}
-          className="h-screen w-full"
-        >
-          <DojoWorkspaceLayout
-            dojo={{
-              id: dojoId!,
-              name: dojo?.name || dojoId!,
-              description: dojo?.description
-            }}
-            modules={layoutModules}
-            activeChallenge={{
-              dojoId: dojoId!,
-              moduleId: moduleId!,
-              challengeId: challengeId!,
-              name: challenge.name
-            }}
-            onChallengeStart={handleChallengeStart}
-            onChallengeClose={handleChallengeClose}
-          />
-        </motion.div>
-      </AnimatePresence>
-    </HeaderProvider>
+          onChallengeStart={handleChallengeStart}
+          onChallengeClose={handleChallengeClose}
+        />
+      </motion.div>
+    </AnimatePresence>
   )
 }

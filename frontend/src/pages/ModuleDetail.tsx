@@ -5,57 +5,51 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Markdown } from '@/components/ui/markdown'
-import { useDojoModules, useDojoSolves, useDojos } from '@/hooks/useDojo'
-import { useHeader } from '@/contexts/HeaderContext'
+import { useDojoStore, useHeaderState } from '@/stores'
 import { ArrowLeft, CheckCircle, Circle, Loader2, Play } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 
 export default function ModuleDetail() {
   const { dojoId, moduleId } = useParams()
   const navigate = useNavigate()
-  const { isHeaderHidden } = useHeader()
+  const { isHeaderHidden } = useHeaderState()
 
   // State for challenge accordion (only one open at a time) - MUST be at the top
   const [openChallenge, setOpenChallenge] = useState<string | null>(null)
   const [headerOffset, setHeaderOffset] = useState(16) // Dynamic offset based on header position
   const [lastScrollY, setLastScrollY] = useState(0)
 
-  const {
-    data: dojosData,
-    isLoading: isLoadingDojo,
-    error: dojoError
-  } = useDojos()
+  // Direct state access to avoid selector issues
+  const dojos = useDojoStore(state => state.dojos)
+  const modulesMap = useDojoStore(state => state.modules)
+  const solvesMap = useDojoStore(state => state.solves)
 
-  const {
-    data: modulesResponse,
-    isLoading: isLoadingModules,
-    error: modulesError
-  } = useDojoModules(dojoId || '')
-
-  const {
-    data: solvesResponse,
-    isLoading: isLoadingSolves,
-    error: solvesError
-  } = useDojoSolves(dojoId || '')
-
-  // Find the specific dojo
-  const dojo = Array.isArray(dojosData)
-    ? dojosData.find(d => d.id === dojoId)
-    : dojosData?.dojos?.find(d => d.id === dojoId)
-
-  // Get modules array from response
-  const modules = modulesResponse?.modules || []
-
-  // Find the specific module
+  // Find data directly
+  const dojo = dojos.find(d => d.id === dojoId)
+  const modules = modulesMap[dojoId || ''] || []
   const module = modules.find(m => m.id === moduleId)
+  const solves = solvesMap[`${dojoId}-all`] || []
 
-  // Get solves array from response
-  const solves = solvesResponse?.solves || []
+  // Loading and error states with direct access
+  const loadingDojos = useDojoStore(state => state.loadingDojos)
+  const loadingModules = useDojoStore(state => state.loadingModules)
+  const loadingSolves = useDojoStore(state => state.loadingSolves)
+  const dojoError = useDojoStore(state => state.dojoError)
+  const moduleError = useDojoStore(state => state.moduleError)
+  const solveError = useDojoStore(state => state.solveError)
 
+  const isLoading = loadingDojos || loadingModules[dojoId || ''] || loadingSolves[`${dojoId}-all`]
+  const error = dojoError || moduleError[dojoId || ''] || solveError[`${dojoId}-all`]
 
+  useEffect(() => {
+    if (dojoId) {
+      useDojoStore.getState().fetchModules(dojoId)
+      useDojoStore.getState().fetchSolves(dojoId)
+    }
+  }, [dojoId])
 
-  if (isLoadingDojo || isLoadingModules || isLoadingSolves) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -63,13 +57,13 @@ export default function ModuleDetail() {
     )
   }
 
-  if (dojoError || modulesError || solvesError) {
+  if (error) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <h2 className="text-2xl font-bold mb-2">Error loading module</h2>
           <p className="text-muted-foreground">
-            {dojoError?.message || modulesError?.message || solvesError?.message}
+            {error}
           </p>
         </div>
       </div>
@@ -192,37 +186,66 @@ export default function ModuleDetail() {
                 const isOpen = openChallenge === challenge.id
 
                 return (
-                  <Card key={challenge.id} className="hover:border-primary/50 transition-all duration-200 relative">
-                    <Collapsible open={isOpen} onOpenChange={() => setOpenChallenge(isOpen ? null : challenge.id)}>
-                      <CollapsibleTrigger asChild>
-                        <CardHeader
-                          className={cn(
-                            "pb-3 pt-4 cursor-pointer group",
-                            isOpen && "sticky z-40 bg-card rounded-t-xl border-b shadow-sm transition-all duration-300"
-                          )}
-                          style={{
-                            top: isOpen ? `${headerOffset * 0.25}rem` : undefined, // Convert to rem
-                            transition: 'top 0.3s ease-out'
-                          }}
-                        >
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-medium text-primary flex-shrink-0">
-                                {index + 1}
-                              </div>
-                              <div className="flex items-center gap-2">
+                  <Card
+                    key={challenge.id}
+                    className={cn(
+                      "hover:border-primary/50 transition-all duration-200 relative",
+                      isOpen && "border-primary/30"
+                    )}
+                  >
+                    <motion.div
+                      initial={false}
+                      className="relative"
+                    >
+                      <CardHeader
+                        className={cn(
+                          "pb-3 pt-4 cursor-pointer group",
+                          isOpen && "sticky z-40 bg-card rounded-t-xl border-b shadow-sm transition-all duration-300"
+                        )}
+                        style={{
+                          top: isOpen ? `${headerOffset * 0.25}rem` : undefined,
+                          transition: 'top 0.3s ease-out'
+                        }}
+                        onClick={() => setOpenChallenge(isOpen ? null : challenge.id)}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <motion.div
+                              className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-medium text-primary flex-shrink-0"
+                              animate={{
+                                scale: isOpen ? 1.05 : 1,
+                                backgroundColor: isOpen ? "hsl(var(--primary) / 0.15)" : "hsl(var(--primary) / 0.1)"
+                              }}
+                              transition={{ duration: 0.2 }}
+                            >
+                              {index + 1}
+                            </motion.div>
+                            <div className="flex items-center gap-2">
+                              <motion.div
+                                animate={{ rotate: isSolved ? 0 : 0 }}
+                                transition={{ duration: 0.2 }}
+                              >
                                 {isSolved ? (
                                   <CheckCircle className="h-4 w-4 text-green-500" />
                                 ) : (
                                   <Circle className="h-4 w-4 text-muted-foreground" />
                                 )}
-                                <CardTitle className="text-lg group-hover:text-primary transition-colors">{challenge.name}</CardTitle>
-                                {challenge.required && (
-                                  <Badge variant="secondary" className="text-xs ml-2">Required</Badge>
-                                )}
-                              </div>
+                              </motion.div>
+                              <CardTitle className="text-lg group-hover:text-primary transition-colors">{challenge.name}</CardTitle>
+                              {challenge.required && (
+                                <Badge variant="secondary" className="text-xs ml-2">Required</Badge>
+                              )}
                             </div>
-                            <div className="flex items-center gap-3">
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <motion.div
+                              animate={{
+                                opacity: isOpen ? 1 : 0,
+                                x: isOpen ? 0 : 10
+                              }}
+                              transition={{ duration: 0.2 }}
+                              className="group-hover:!opacity-100 group-hover:!x-0"
+                            >
                               <Button
                                 onClick={(e) => {
                                   e.stopPropagation()
@@ -230,30 +253,56 @@ export default function ModuleDetail() {
                                 }}
                                 size="sm"
                                 variant={isSolved ? "outline" : "default"}
-                                className={cn(
-                                  "transition-opacity",
-                                  isOpen ? "opacity-100" : "opacity-0 group-hover:opacity-100"
-                                )}
                               >
                                 {isSolved ? "Review" : "Start"}
                                 <Play className="h-3 w-3 ml-1" />
                               </Button>
-                            </div>
+                            </motion.div>
                           </div>
-                        </CardHeader>
-                      </CollapsibleTrigger>
+                        </div>
+                      </CardHeader>
 
-
-                      <CollapsibleContent>
-                        <CardContent className=" border-t">
-                          {challenge.description && (
-                            <div className="prose prose-sm dark:prose-invert max-w-none">
-                              <Markdown>{challenge.description}</Markdown>
-                            </div>
-                          )}
-                        </CardContent>
-                      </CollapsibleContent>
-                    </Collapsible>
+                      <AnimatePresence initial={false}>
+                        {isOpen && (
+                          <motion.div
+                            key={`content-${challenge.id}`}
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{
+                              height: "auto",
+                              opacity: 1,
+                              transition: {
+                                height: { duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] },
+                                opacity: { duration: 0.2, delay: 0.1 }
+                              }
+                            }}
+                            exit={{
+                              height: 0,
+                              opacity: 0,
+                              transition: {
+                                height: { duration: 0.2, ease: [0.25, 0.46, 0.45, 0.94] },
+                                opacity: { duration: 0.1 }
+                              }
+                            }}
+                            style={{ overflow: "hidden" }}
+                          >
+                            <CardContent className="border-t">
+                              <motion.div
+                                initial={{ y: -10, opacity: 0 }}
+                                animate={{ y: 0, opacity: 1 }}
+                                exit={{ y: -10, opacity: 0 }}
+                                transition={{ duration: 0.2, delay: 0.1 }}
+                              >
+                                {challenge.description && (
+                                  <div className="prose prose-sm dark:prose-invert max-w-none">
+                                    <Markdown>{challenge.description}</Markdown>
+                                  </div>
+                                )}
+                              </motion.div>
+                            </CardContent>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </motion.div>
                   </Card>
                 )
               })}

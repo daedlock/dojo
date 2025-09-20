@@ -10,7 +10,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Logo } from '@/components/ui/Logo'
-import { useIsAuthenticated, useLogout } from '@/hooks/useAuth'
+import { useAuthStore, useDojoStore, useUIStore } from '@/stores'
 import {
   Menu, X, User, LogOut, Shield, Home, ChevronRight,
   BookOpen, Trophy, Users, Settings, Search, Bell,
@@ -18,18 +18,19 @@ import {
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { ThemeSelector } from '@/components/ui/theme-selector'
-import { useDojos } from '@/hooks/useDojo'
-import { useHeader } from '@/contexts/HeaderContext'
 import { cn } from '@/lib/utils'
 
 export function Header() {
-  const { isAuthenticated, isLoading, user } = useIsAuthenticated()
-  const logout = useLogout()
+  const isAuthenticated = useAuthStore(state => state.isAuthenticated)
+  const isLoading = useAuthStore(state => state.isLoading)
+  const user = useAuthStore(state => state.user)
+  const logout = useAuthStore(state => state.logout)
+  const dojos = useDojoStore(state => state.dojos)
+  const isHeaderHidden = useUIStore(state => state.isHeaderHidden)
+
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const location = useLocation()
   const { dojoId } = useParams()
-  const { data: dojosData } = useDojos()
-  const { isHeaderHidden, setHeaderHidden } = useHeader()
   const [scrolled, setScrolled] = useState(false)
   const [hidden, setHidden] = useState(false)
   const [lastScrollY, setLastScrollY] = useState(0)
@@ -58,10 +59,10 @@ export function Header() {
   }, [lastScrollY])
 
   // Get current dojo info if we're on a dojo page
-  const currentDojo = dojoId ? dojosData?.dojos?.find(d => d.id === dojoId) : null
+  const currentDojo = dojoId ? dojos?.find(d => d.id === dojoId) : null
 
   const handleLogout = async () => {
-    await logout.mutateAsync()
+    await logout()
     setMobileMenuOpen(false)
   }
 
@@ -179,7 +180,6 @@ export function Header() {
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
                     onClick={handleLogout}
-                    disabled={logout.isPending}
                     className="text-destructive focus:text-destructive"
                   >
                     <LogOut className="mr-2 h-4 w-4" />
@@ -290,7 +290,6 @@ export function Header() {
                     variant="ghost"
                     size="sm"
                     onClick={handleLogout}
-                    disabled={logout.isPending}
                     className="w-full justify-start"
                   >
                     <LogOut className="h-4 w-4 mr-2" />

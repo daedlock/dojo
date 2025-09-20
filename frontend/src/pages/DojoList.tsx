@@ -2,14 +2,70 @@ import { Link } from 'react-router-dom'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { useDojos } from '@/hooks'
+import { useDojoStore } from '@/stores'
 import { Markdown } from '@/components/ui/markdown'
 import { Loader2, AlertCircle, Star, Users, Trophy, BookOpen, Zap } from 'lucide-react'
+import { motion } from 'framer-motion'
+import { useMemo } from 'react'
 
 export default function DojoList() {
-  const { data: dojosData, isLoading, error } = useDojos()
+  const dojos = useDojoStore(state => state.dojos)
+  const loadingDojos = useDojoStore(state => state.loadingDojos)
+  const dojoError = useDojoStore(state => state.dojoError)
 
-  if (isLoading) {
+  // Memoize computed values to prevent infinite re-renders (must be before any early returns)
+  const { gettingStartedDojos, coreDojos } = useMemo(() => {
+    // Belt order for sorting
+    const BELT_ORDER = ["white", "orange", "yellow", "green", "purple", "blue", "brown", "red", "black"]
+
+    // Sort dojos by belt order for official dojos, then by name (create new array)
+    const sortDojos = (dojoList: typeof dojos) => {
+      return [...dojoList].sort((a, b) => {
+        // If both have belts, sort by belt order
+        if (a.award?.belt && b.award?.belt) {
+          const aIndex = BELT_ORDER.indexOf(a.award.belt)
+          const bIndex = BELT_ORDER.indexOf(b.award.belt)
+          if (aIndex !== bIndex) {
+            return aIndex - bIndex
+          }
+        }
+
+        // If only one has a belt, prioritize the one with belt
+        if (a.award?.belt && !b.award?.belt) return -1
+        if (!a.award?.belt && b.award?.belt) return 1
+
+        // Otherwise sort by name
+        return (a.name || '').localeCompare(b.name || '')
+      })
+    }
+
+    // Hardcoded dojo assignments to specific sections
+    const gettingStartedDojoIds = [
+      'computing-101',
+      'linux-luminarium',
+      'playing-with-programs',
+      'start-here'
+    ]
+
+    const coreDojoIds = [
+      'intro-to-cybersecurity',
+      'system-security'
+    ]
+
+    // Categorize dojos by hardcoded lists
+    const gettingStartedDojos = sortDojos(dojos.filter(dojo =>
+      gettingStartedDojoIds.includes(dojo.id) ||
+      (!coreDojoIds.includes(dojo.id)) // Include all non-core dojos in getting started
+    ))
+
+    const coreDojos = sortDojos(dojos.filter(dojo =>
+      coreDojoIds.includes(dojo.id)
+    ))
+
+    return { gettingStartedDojos, coreDojos }
+  }, [dojos])
+
+  if (loadingDojos) {
     return (
       <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
         <div className="flex items-center gap-2">
@@ -20,14 +76,14 @@ export default function DojoList() {
     )
   }
 
-  if (error) {
+  if (dojoError) {
     return (
       <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
         <div className="text-center space-y-4">
           <AlertCircle className="h-12 w-12 text-destructive mx-auto" />
           <h1 className="text-xl font-semibold">Failed to load dojos</h1>
           <p className="text-muted-foreground">
-            {error instanceof Error ? error.message : 'An unexpected error occurred'}
+            {dojoError}
           </p>
           <Button onClick={() => window.location.reload()} variant="outline">
             Try again
@@ -36,58 +92,6 @@ export default function DojoList() {
       </div>
     )
   }
-
-  const dojos = dojosData?.dojos || []
-
-  // Debug: log available dojo IDs and names
-  console.log('Available dojos:', dojos.map(d => ({ id: d.id, name: d.name })))
-
-  // Belt order for sorting
-  const BELT_ORDER = ["white", "orange", "yellow", "green", "purple", "blue", "brown", "red", "black"]
-
-  // Sort dojos by belt order for official dojos, then by name
-  const sortDojos = (dojoList: typeof dojos) => {
-    return dojoList.sort((a, b) => {
-      // If both have belts, sort by belt order
-      if (a.award?.belt && b.award?.belt) {
-        const aIndex = BELT_ORDER.indexOf(a.award.belt)
-        const bIndex = BELT_ORDER.indexOf(b.award.belt)
-        if (aIndex !== bIndex) {
-          return aIndex - bIndex
-        }
-      }
-
-      // If only one has a belt, prioritize the one with belt
-      if (a.award?.belt && !b.award?.belt) return -1
-      if (!a.award?.belt && b.award?.belt) return 1
-
-      // Otherwise sort by name
-      return (a.name || '').localeCompare(b.name || '')
-    })
-  }
-
-  // Hardcoded dojo assignments to specific sections
-  const gettingStartedDojoIds = [
-    'computing-101',
-    'linux-luminarium',
-    'playing-with-programs',
-    'start-here'
-  ]
-
-  const coreDojoIds = [
-    'intro-to-cybersecurity',
-    'system-security'
-  ]
-
-  // Categorize dojos by hardcoded lists
-  const gettingStartedDojos = sortDojos(dojos.filter(dojo =>
-    gettingStartedDojoIds.includes(dojo.id) ||
-    (!coreDojoIds.includes(dojo.id)) // Include all non-core dojos in getting started
-  ))
-
-  const coreDojos = sortDojos(dojos.filter(dojo =>
-    coreDojoIds.includes(dojo.id)
-  ))
 
   // Remove community section for now
   const communityDojos: typeof dojos = []
@@ -207,7 +211,13 @@ export default function DojoList() {
   )
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <motion.div
+      className="min-h-screen bg-background text-foreground"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+      transition={{ duration: 0.2, ease: [0.25, 0.46, 0.45, 0.94] }}
+    >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Hero Section */}
         <div className="py-16 sm:py-20 lg:py-24">
@@ -290,6 +300,6 @@ export default function DojoList() {
           </div>
         )}
       </div>
-    </div>
+    </motion.div>
   )
 }

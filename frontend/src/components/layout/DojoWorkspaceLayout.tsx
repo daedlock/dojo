@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useWorkspace } from '@/hooks/useWorkspace'
 import { useStartChallenge } from '@/hooks/useDojo'
 import { FullScreenWorkspace } from './FullScreenWorkspace'
-import { useHeader } from '@/contexts/HeaderContext'
+import { useUIStore } from '@/stores'
 import { CommandPalette } from '@/components/ui/command-palette'
 import { useCommands } from '@/hooks/useCommands'
 import { useHotkeys, hotkey } from '@/hooks/useHotkeys'
@@ -57,7 +57,8 @@ export function DojoWorkspaceLayout({
   const [sidebarWidth, setSidebarWidth] = useState(320)
   const [isResizing, setIsResizing] = useState(false)
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false)
-  const { headerHidden, setHeaderHidden } = useHeader()
+  const isHeaderHidden = useUIStore(state => state.isHeaderHidden)
+  const setHeaderHidden = useUIStore(state => state.setHeaderHidden)
   const startChallengeMutation = useStartChallenge()
 
   const { data: workspaceStatus } = useWorkspace({}, !!activeChallenge)
@@ -120,7 +121,7 @@ export function DojoWorkspaceLayout({
     activeService,
     sidebarCollapsed,
     isFullScreen,
-    headerHidden,
+    headerHidden: isHeaderHidden,
     workspaceStatus,
     setActiveService,
     setSidebarCollapsed,
@@ -175,7 +176,7 @@ export function DojoWorkspaceLayout({
         sidebarCollapsed={sidebarCollapsed}
         sidebarWidth={sidebarWidth}
         isResizing={isResizing}
-        headerHidden={headerHidden}
+        headerHidden={isHeaderHidden}
         onSidebarCollapse={setSidebarCollapsed}
         onHeaderToggle={setHeaderHidden}
         onChallengeStart={handleChallengeStart}
@@ -193,7 +194,7 @@ export function DojoWorkspaceLayout({
           activeService={activeService}
           workspaceActive={workspaceStatus?.active || false}
           isFullScreen={isFullScreen}
-          headerHidden={headerHidden}
+          headerHidden={isHeaderHidden}
           onServiceChange={setActiveService}
           onFullScreenToggle={() => setIsFullScreen(!isFullScreen)}
         />

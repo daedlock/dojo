@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { authService, type LoginCredentials } from '@/services/auth'
+import { useAuthStore } from '@/stores'
+import { type LoginCredentials } from '@/services/auth'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -12,32 +13,23 @@ import { Eye, EyeOff, ArrowLeft } from 'lucide-react'
 
 export function ClerkLoginForm() {
   const navigate = useNavigate()
+  const { login, loginLoading, authError, clearError } = useAuthStore()
   const [formData, setFormData] = useState<LoginCredentials>({
     name: '',
     password: '',
     remember_me: false
   })
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
   const [showPassword, setShowPassword] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setLoading(true)
-    setError(null)
+    clearError()
 
     try {
-      const response = await authService.login(formData)
-
-      if (response.success) {
-        navigate('/')
-      } else {
-        setError(response.errors?.join(', ') || 'Login failed')
-      }
-    } catch (err: any) {
-      setError(err.message || 'Network error')
-    } finally {
-      setLoading(false)
+      await login(formData)
+      navigate('/')
+    } catch (err) {
+      // Error is handled by the store
     }
   }
 
@@ -68,9 +60,9 @@ export function ClerkLoginForm() {
         <Card className="shadow-lg">
           <CardContent className="p-8">
             <form onSubmit={handleSubmit} className="space-y-6">
-              {error && (
+              {authError && (
                 <Alert variant="destructive">
-                  <AlertDescription>{error}</AlertDescription>
+                  <AlertDescription>{authError}</AlertDescription>
                 </Alert>
               )}
 
@@ -86,7 +78,7 @@ export function ClerkLoginForm() {
                   onChange={handleInputChange('name')}
                   placeholder="Enter your email or username"
                   required
-                  disabled={loading}
+                  disabled={loginLoading}
                   className="h-11"
                 />
               </div>
@@ -104,14 +96,14 @@ export function ClerkLoginForm() {
                     onChange={handleInputChange('password')}
                     placeholder="Enter your password"
                     required
-                    disabled={loading}
+                    disabled={loginLoading}
                     className="h-11 pr-10"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                    disabled={loading}
+                    disabled={loginLoading}
                   >
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
@@ -132,9 +124,9 @@ export function ClerkLoginForm() {
               <Button
                 type="submit"
                 className="w-full h-11 font-medium transition-colors"
-                disabled={loading}
+                disabled={loginLoading}
               >
-                {loading ? (
+                {loginLoading ? (
                   <div className="flex items-center space-x-2">
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                     <span>Signing in...</span>
