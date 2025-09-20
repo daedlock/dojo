@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useDojoModules, useDojoSolves, useDojos } from '@/hooks/useDojo'
 import { DojoWorkspaceLayout } from '@/components/layout/DojoWorkspaceLayout'
 import { Markdown } from '@/components/ui/markdown'
-import { Loader2, AlertCircle, ArrowLeft, BookOpen, Users, Trophy, Clock, Target } from 'lucide-react'
+import { Loader2, AlertCircle, ArrowLeft, BookOpen, Users, Trophy, Clock, Target, Play, CheckCircle, ChevronRight } from 'lucide-react'
 
 export default function DojoDetail() {
   const { dojoId } = useParams()
@@ -22,6 +22,7 @@ export default function DojoDetail() {
 
   // State for description expansion
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false)
+
 
   const {
     data: dojosData,
@@ -58,6 +59,7 @@ export default function DojoDetail() {
   const handleChallengeClose = () => {
     setActiveChallenge(undefined)
   }
+
 
   if (!dojoId) {
     return (
@@ -346,38 +348,44 @@ export default function DojoDetail() {
 
         {/* Modules Grid */}
         <div className="space-y-6">
-          <h2 className="text-2xl font-bold mb-6">Course Modules</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
+            <BookOpen className="h-6 w-6 text-primary" />
+            Course Modules
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
             {modules.map((module, index) => {
               const moduleProgress = module.challenges ?
                 module.challenges.filter(c => solvedChallengeIds.has(c.id)).length / module.challenges.length * 100 : 0
 
               return (
-                <Card key={module.id} className="relative hover:shadow-md hover:border-muted-foreground/20 transition-all duration-200 group">
-                  {/* Module number positioned top-right */}
-                  <div className="absolute top-4 right-4 w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-sm font-semibold text-primary">
-                    {index + 1}
-                  </div>
-
-                  <CardHeader className="pb-3 pr-16">
-                    <CardTitle className="text-lg group-hover:text-foreground transition-colors mb-3">
-                      {module.name}
-                    </CardTitle>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="text-xs">
-                        {Math.round(moduleProgress)}% Complete
-                      </Badge>
-                      <Badge variant="secondary" className="text-xs">
-                        {module.challenges?.length || 0} challenges
-                      </Badge>
+                <Card key={module.id} className="h-full hover:border-muted-foreground/20 transition-all duration-200 hover:translate-y-[-2px] hover:shadow-md">
+                  {/* Module Card Header */}
+                  <CardHeader className="pb-3">
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-sm font-semibold text-primary flex-shrink-0">
+                        {index + 1}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <CardTitle className="text-lg mb-2 leading-tight">{module.name}</CardTitle>
+                        <div className="flex items-center gap-2 mb-3">
+                          <Badge variant="outline" className="text-xs">
+                            {Math.round(moduleProgress)}% Complete
+                          </Badge>
+                          <Badge variant="secondary" className="text-xs">
+                            {module.challenges?.length || 0} challenges
+                          </Badge>
+                        </div>
+                      </div>
                     </div>
                   </CardHeader>
 
+                  {/* Module Card Content */}
                   <CardContent className="pt-0">
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between text-sm">
+                    {/* Progress Bar */}
+                    <div className="mb-4">
+                      <div className="flex items-center justify-between text-xs mb-2">
                         <span className="text-muted-foreground">Progress</span>
-                        <span className="text-muted-foreground font-medium">
+                        <span className="font-medium">
                           {module.challenges?.filter(c => solvedChallengeIds.has(c.id)).length || 0} / {module.challenges?.length || 0}
                         </span>
                       </div>
@@ -387,17 +395,21 @@ export default function DojoDetail() {
                           style={{ width: `${moduleProgress}%` }}
                         />
                       </div>
-
-                      {module.challenges && module.challenges.length > 0 && (
-                        <Button
-                          onClick={() => handleChallengeStart(dojoId, module.id, module.challenges[0].id)}
-                          className="w-full mt-4"
-                          variant={moduleProgress > 0 ? 'default' : 'outline'}
-                        >
-                          {moduleProgress > 0 ? 'Continue Module' : 'Start Module'}
-                        </Button>
-                      )}
                     </div>
+
+
+                    {/* View Challenges Button */}
+                    <Button
+                      asChild
+                      variant="outline"
+                      size="sm"
+                      className="w-full"
+                    >
+                      <Link to={`/dojo/${dojoId}/module/${module.id}`}>
+                        View Challenges
+                        <ChevronRight className="h-4 w-4 ml-2" />
+                      </Link>
+                    </Button>
                   </CardContent>
                 </Card>
               )

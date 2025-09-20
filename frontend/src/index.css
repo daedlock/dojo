@@ -309,69 +309,238 @@
 /* Custom prose styles to work with our theme */
 @layer components {
   .prose {
-    @apply text-foreground;
+    @apply text-foreground max-w-none;
   }
-  
-  .prose p {
-    @apply text-foreground;
-  }
-  
+
+  /* Headings */
   .prose h1,
   .prose h2,
   .prose h3,
   .prose h4,
   .prose h5,
   .prose h6 {
-    @apply text-foreground;
-  }
-  
-  .prose strong {
     @apply text-foreground font-semibold;
   }
-  
-  .prose em {
+
+  .prose h1 {
+    @apply text-3xl mb-4 mt-8 first:mt-0;
+  }
+
+  .prose h2 {
+    @apply text-2xl mb-3 mt-6 first:mt-0;
+  }
+
+  .prose h3 {
+    @apply text-xl mb-2 mt-5 first:mt-0;
+  }
+
+  .prose h4 {
+    @apply text-lg mb-2 mt-4 first:mt-0;
+  }
+
+  .prose h5,
+  .prose h6 {
+    @apply text-base mb-2 mt-3 first:mt-0;
+  }
+
+  /* Text elements */
+  .prose p {
+    @apply text-foreground mb-4 leading-relaxed;
+  }
+
+  .prose strong,
+  .prose b {
+    @apply text-foreground font-semibold;
+  }
+
+  .prose em,
+  .prose i {
+    @apply text-foreground italic;
+  }
+
+  .prose small {
+    @apply text-muted-foreground text-sm;
+  }
+
+  .prose mark {
+    @apply bg-primary/20 text-foreground px-1 rounded;
+  }
+
+  .prose del,
+  .prose s {
+    @apply text-muted-foreground line-through;
+  }
+
+  .prose ins,
+  .prose u {
+    @apply text-foreground underline decoration-primary/50;
+  }
+
+  .prose sub,
+  .prose sup {
+    @apply text-muted-foreground text-xs;
+  }
+
+  /* Code elements */
+  .prose code {
+    @apply bg-muted text-foreground px-1.5 py-0.5 rounded text-sm font-mono;
+  }
+
+  .prose pre {
+    @apply bg-muted text-foreground border border-border rounded-lg p-4 overflow-x-auto;
+  }
+
+  .prose pre code {
+    @apply bg-transparent p-0 text-sm;
+  }
+
+  .prose kbd {
+    @apply bg-muted text-foreground border border-border rounded px-1.5 py-0.5 text-xs font-mono shadow-sm;
+  }
+
+  /* Quotes */
+  .prose blockquote {
+    @apply border-l-4 border-primary text-foreground bg-muted/30 pl-4 py-2 my-4 italic;
+  }
+
+  .prose blockquote p {
+    @apply mb-0;
+  }
+
+  .prose q {
     @apply text-foreground;
   }
-  
-  .prose code {
-    @apply bg-muted text-foreground px-1 py-0.5 rounded text-sm;
+
+  .prose cite {
+    @apply text-muted-foreground italic text-sm;
   }
-  
-  .prose pre {
-    @apply bg-muted text-foreground border border-border rounded-lg;
-  }
-  
-  .prose pre code {
-    @apply bg-transparent p-0;
-  }
-  
-  .prose blockquote {
-    @apply border-l-primary text-foreground bg-muted/30;
-  }
-  
+
+  /* Lists */
   .prose ul,
   .prose ol {
-    @apply text-foreground;
+    @apply text-foreground mb-4 pl-6;
   }
-  
+
   .prose li {
-    @apply text-foreground;
+    @apply text-foreground mb-1;
   }
-  
+
+  .prose ul > li {
+    @apply list-disc;
+  }
+
+  .prose ol > li {
+    @apply list-decimal;
+  }
+
+  .prose li > ul,
+  .prose li > ol {
+    @apply mt-1 mb-0;
+  }
+
+  .prose dt {
+    @apply text-foreground font-semibold mt-4;
+  }
+
+  .prose dd {
+    @apply text-foreground ml-4 mb-2;
+  }
+
+  /* Links */
   .prose a {
-    @apply text-primary;
+    @apply text-primary hover:text-primary/80 underline decoration-primary/30 hover:decoration-primary/60 transition-all duration-200 font-medium;
   }
-  
+
+  .prose a:visited {
+    @apply text-accent;
+  }
+
+  .prose a:focus {
+    @apply outline-none ring-2 ring-primary/50 rounded-sm;
+  }
+
+  /* Tables */
   .prose table {
-    @apply border-border;
+    @apply border-collapse border border-border w-full my-4;
   }
-  
+
   .prose th {
-    @apply bg-muted text-foreground border-border;
+    @apply bg-muted text-foreground border border-border px-3 py-2 font-semibold text-left;
   }
-  
+
   .prose td {
-    @apply text-foreground border-border;
+    @apply text-foreground border border-border px-3 py-2;
+  }
+
+  .prose thead {
+    @apply bg-muted/50;
+  }
+
+  .prose tbody tr:nth-child(even) {
+    @apply bg-muted/20;
+  }
+
+  .prose caption {
+    @apply text-muted-foreground text-sm mt-2;
+  }
+
+  /* Horizontal rule */
+  .prose hr {
+    @apply border-0 border-t border-border my-6;
+  }
+
+  /* Images and media */
+  .prose img {
+    @apply rounded-lg border border-border max-w-full h-auto;
+  }
+
+  .prose figure {
+    @apply my-6;
+  }
+
+  .prose figcaption {
+    @apply text-muted-foreground text-sm text-center mt-2;
+  }
+
+  /* Form elements */
+  .prose input,
+  .prose textarea,
+  .prose select {
+    @apply bg-input text-foreground border border-border rounded px-3 py-2;
+  }
+
+  .prose input:focus,
+  .prose textarea:focus,
+  .prose select:focus {
+    @apply outline-none ring-2 ring-primary/50;
+  }
+
+  /* Details and summary */
+  .prose details {
+    @apply bg-muted/30 border border-border rounded p-3 my-4;
+  }
+
+  .prose summary {
+    @apply text-foreground font-semibold cursor-pointer hover:text-primary transition-colors;
+  }
+
+  .prose details[open] summary {
+    @apply mb-2 pb-2 border-b border-border;
+  }
+
+  /* Line breaks */
+  .prose br {
+    @apply leading-relaxed;
+  }
+
+  /* Address */
+  .prose address {
+    @apply text-foreground italic not-italic;
+  }
+
+  /* Abbreviations */
+  .prose abbr {
+    @apply text-foreground border-b border-dotted border-muted-foreground cursor-help;
   }
 }
 
@@ -401,21 +570,13 @@
   /* Strings */
   .hljs-string,
   .hljs-regexp {
-    color: #16a34a;
-  }
-  .dark .hljs-string,
-  .dark .hljs-regexp {
-    color: #4ade80;
+    color: hsl(var(--chart-3));
   }
 
   /* Numbers */
   .hljs-number,
   .hljs-literal {
-    color: #ea580c;
-  }
-  .dark .hljs-number,
-  .dark .hljs-literal {
-    color: #fb923c;
+    color: hsl(var(--destructive));
   }
 
   /* Comments */
@@ -429,12 +590,7 @@
   .hljs-function,
   .hljs-title.function_,
   .hljs-title.function {
-    color: #2563eb;
-  }
-  .dark .hljs-function,
-  .dark .hljs-title.function_,
-  .dark .hljs-title.function {
-    color: #60a5fa;
+    color: hsl(var(--chart-5));
   }
 
   /* Variables and parameters */
@@ -448,12 +604,7 @@
   .hljs-title.class_,
   .hljs-title.class,
   .hljs-selector-class {
-    color: #ca8a04;
-  }
-  .dark .hljs-title.class_,
-  .dark .hljs-title.class,
-  .dark .hljs-selector-class {
-    color: #facc15;
+    color: hsl(var(--chart-2));
   }
 
   /* Tags (HTML/XML) */
@@ -474,32 +625,19 @@
   .hljs-meta,
   .hljs-meta-keyword,
   .hljs-doctag {
-    color: #9333ea;
-  }
-  .dark .hljs-meta,
-  .dark .hljs-meta-keyword,
-  .dark .hljs-doctag {
-    color: #a78bfa;
+    color: hsl(var(--chart-4));
   }
 
   /* Additions in diffs */
   .hljs-addition {
-    color: #16a34a;
-    background-color: #dcfce7;
-  }
-  .dark .hljs-addition {
-    color: #4ade80;
-    background-color: rgba(34, 197, 94, 0.1);
+    color: hsl(var(--chart-3));
+    background-color: hsl(var(--chart-3) / 0.1);
   }
 
   /* Deletions in diffs */
   .hljs-deletion {
-    color: #dc2626;
-    background-color: #fee2e2;
-  }
-  .dark .hljs-deletion {
-    color: #f87171;
-    background-color: rgba(239, 68, 68, 0.1);
+    color: hsl(var(--destructive));
+    background-color: hsl(var(--destructive) / 0.1);
   }
 
   /* Important, bold text */
@@ -511,4 +649,5 @@
   .hljs-emphasis {
     font-style: italic;
   }
+
 }

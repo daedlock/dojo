@@ -84,10 +84,10 @@ export function Header() {
                     <Link
                       to={crumb.href}
                       className={cn(
-                        "flex items-center space-x-1.5 transition-colors",
+                        "flex items-center space-x-1.5 px-2 py-1 rounded-md transition-colors",
                         index === breadcrumbs.length - 1
                           ? "text-foreground font-medium"
-                          : "text-muted-foreground hover:text-foreground"
+                          : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
                       )}
                     >
                       <crumb.icon className="h-4 w-4" />
@@ -110,7 +110,7 @@ export function Header() {
                   key={item.name}
                   to={item.href}
                   className={cn(
-                    "flex items-center space-x-1.5 px-3 py-2 text-sm rounded-md transition-all",
+                    "flex items-center space-x-1.5 px-3 py-2 text-sm transition-colors",
                     item.active
                       ? "text-primary font-semibold"
                       : "text-muted-foreground hover:text-foreground font-medium"
@@ -126,13 +126,13 @@ export function Header() {
           {/* Desktop Right Section */}
           <div className="hidden lg:flex items-center space-x-3">
             {/* Search Button */}
-            <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
+            <Button variant="ghost" size="sm">
               <Search className="h-4 w-4" />
             </Button>
 
             {/* Notifications */}
             {isAuthenticated && (
-              <Button variant="ghost" size="sm" className="relative text-muted-foreground hover:text-foreground">
+              <Button variant="ghost" size="sm" className="relative">
                 <Bell className="h-4 w-4" />
                 <span className="absolute top-0 right-0 h-2 w-2 bg-destructive rounded-full" />
               </Button>
@@ -170,7 +170,6 @@ export function Header() {
                   size="icon"
                   onClick={handleLogout}
                   disabled={logout.isPending}
-                  className="text-muted-foreground hover:text-foreground"
                 >
                   <LogOut className="h-4 w-4" />
                 </Button>
@@ -192,13 +191,15 @@ export function Header() {
           </div>
 
           {/* Mobile Menu Button */}
-          <button
-            className="lg:hidden p-2 text-muted-foreground hover:text-foreground"
+          <Button
+            variant="ghost"
+            size="icon"
+            className="lg:hidden"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             aria-label="Toggle menu"
           >
             {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -233,7 +234,7 @@ export function Header() {
                   key={item.name}
                   to={item.href}
                   className={cn(
-                    "flex items-center space-x-2 px-3 py-2 text-sm rounded-md transition-colors",
+                    "flex items-center space-x-2 px-3 py-2 text-sm transition-colors",
                     item.active
                       ? "text-primary font-semibold"
                       : "text-muted-foreground hover:text-foreground font-medium"
@@ -277,7 +278,7 @@ export function Header() {
                     size="sm"
                     onClick={handleLogout}
                     disabled={logout.isPending}
-                    className="w-full justify-start text-muted-foreground hover:text-foreground"
+                    className="w-full justify-start"
                   >
                     <LogOut className="h-4 w-4 mr-2" />
                     Logout
