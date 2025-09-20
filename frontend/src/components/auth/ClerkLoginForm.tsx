@@ -7,7 +7,8 @@ import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Card, CardContent } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
-import { Eye, EyeOff, Shield, ArrowLeft } from 'lucide-react'
+import { Logo } from '@/components/ui/Logo'
+import { Eye, EyeOff, ArrowLeft } from 'lucide-react'
 
 export function ClerkLoginForm() {
   const navigate = useNavigate()
@@ -53,13 +54,14 @@ export function ClerkLoginForm() {
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <div className="w-full max-w-md space-y-6">
         {/* Header */}
-        <div className="text-center space-y-2">
-          <div className="flex items-center justify-center space-x-2">
-            <Shield className="h-8 w-8 text-primary" />
-            <span className="text-2xl font-bold text-foreground">DOJO</span>
+        <div className="text-center space-y-6">
+          <div className="flex justify-center mb-4">
+            <Logo textClassName="text-3xl" />
           </div>
-          <h1 className="text-2xl font-semibold text-foreground">Sign in to your account</h1>
-          <p className="text-sm text-muted-foreground">Welcome back! Please enter your details.</p>
+          <div className="space-y-2">
+            <h1 className="text-2xl font-semibold text-foreground">Sign in to your account</h1>
+            <p className="text-sm text-muted-foreground">Welcome back! Please enter your details.</p>
+          </div>
         </div>
 
         {/* Main Form Card */}
@@ -171,7 +173,7 @@ export function ClerkLoginForm() {
             className="inline-flex items-center space-x-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
             <ArrowLeft className="h-4 w-4" />
-            <span>Back to DOJO</span>
+            <span>Back to pwn.college</span>
           </Link>
         </div>
       </div>

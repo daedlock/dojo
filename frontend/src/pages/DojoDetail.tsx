@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { useDojoModules, useDojoSolves, useDojos } from '@/hooks/useDojo'
 import { Markdown } from '@/components/ui/markdown'
-import { Loader2, AlertCircle, ArrowLeft, BookOpen, Users, Trophy, Clock, Target, Play, CheckCircle, ChevronRight } from 'lucide-react'
+import { Loader2, AlertCircle, ArrowLeft, BookOpen, Users, Trophy, Clock, Target, Play, CheckCircle, ChevronRight, Activity, Zap } from 'lucide-react'
 
 export default function DojoDetail() {
   const { dojoId } = useParams()
@@ -83,10 +83,20 @@ export default function DojoDetail() {
   // Create a set of solved challenge IDs for quick lookup
   const solvedChallengeIds = new Set(solves.map(solve => solve.challenge_id))
 
-  // Calculate stats
+  // Calculate course stats
   const totalChallenges = modules.reduce((acc, mod) => acc + (mod.challenges?.length || 0), 0)
-  const solvedCount = solves.length
-  const progressPercentage = totalChallenges > 0 ? Math.round((solvedCount / totalChallenges) * 100) : 0
+  const totalSolves = solves.length // All solves across all users
+  const uniqueHackers = new Set(solves.map(solve => solve.user_id)).size
+
+  // Calculate "hacking now" based on recent activity (solves in last 24 hours)
+  const now = new Date()
+  const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000)
+  const recentSolves = solves.filter(solve => {
+    if (!solve.timestamp) return false
+    const solveDate = new Date(solve.timestamp)
+    return solveDate >= yesterday
+  })
+  const hackingNow = new Set(recentSolves.map(solve => solve.user_id)).size
 
 
   const getDojoIcon = (dojo: any) => {
@@ -143,7 +153,7 @@ export default function DojoDetail() {
                 <Badge variant="default">Official</Badge>
               )}
               <Badge variant="outline">
-                {progressPercentage}% Complete
+                {totalSolves} Total Solves
               </Badge>
               <Badge variant="secondary">
                 {modules.length} {modules.length === 1 ? 'Module' : 'Modules'}
@@ -179,115 +189,70 @@ export default function DojoDetail() {
           </div>
         </div>
 
-        {/* Stats Section */}
-        <div className="mb-12">
-          <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
-            <Trophy className="h-6 w-6 text-primary" />
-            Stats
+        {/* Course Stats Section */}
+        <div className="mb-8">
+          <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
+            <Activity className="h-5 w-5 text-primary" />
+            Course Statistics
           </h2>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Your Progress Card */}
-            <Card className="relative overflow-hidden border-primary/20 hover:border-primary/40 transition-all duration-300">
-              <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent" />
-              <CardHeader className="relative pb-3">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Target className="h-5 w-5 text-primary" />
-                  Your Progress
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="relative space-y-6">
-                {/* Progress Bar */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Overall Completion</span>
-                    <span className="font-semibold text-primary">{progressPercentage}%</span>
+
+          <div className="bg-gradient-to-br from-background via-background to-muted/20 rounded-xl border border-border/50 p-6 backdrop-blur-sm">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+              {/* Total Solves */}
+              <div className="group">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-10 h-10 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                    <Trophy className="h-5 w-5 text-primary" />
                   </div>
-                  <div className="h-3 bg-muted rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-gradient-to-r from-primary to-primary/70 rounded-full transition-all duration-500"
-                      style={{ width: `${progressPercentage}%` }}
-                    />
+                  <div>
+                    <div className="text-2xl font-bold tracking-tight text-foreground">{totalSolves.toLocaleString()}</div>
+                    <div className="text-sm font-medium text-muted-foreground">Total Solves</div>
                   </div>
                 </div>
+              </div>
 
-                {/* Stats Grid */}
-                <div className="grid grid-cols-3 gap-4 text-center">
-                  <div className="space-y-1">
-                    <div className="text-3xl font-bold text-foreground">{solvedCount}</div>
-                    <div className="text-xs text-muted-foreground">Solved</div>
+              {/* Hacking Now */}
+              <div className="group">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-10 h-10 rounded-lg bg-green-500/10 border border-green-500/20 flex items-center justify-center group-hover:bg-green-500/20 transition-colors">
+                    <div className="relative">
+                      <Zap className="h-5 w-5 text-green-600" />
+                      <div className="absolute -top-1 -right-1 w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                    </div>
                   </div>
-                  <div className="space-y-1">
-                    <div className="text-3xl font-bold text-foreground">{totalChallenges}</div>
-                    <div className="text-xs text-muted-foreground">Total</div>
-                  </div>
-                  <div className="space-y-1">
-                    <div className="text-3xl font-bold text-foreground">{modules.length}</div>
-                    <div className="text-xs text-muted-foreground">Modules</div>
-                  </div>
-                </div>
-
-                {/* Achievement Badges */}
-                <div className="flex items-center gap-2">
-                  <Badge variant="outline" className="text-xs">
-                    🔥 {solvedCount > 0 ? 'Active' : 'Getting Started'}
-                  </Badge>
-                  {progressPercentage >= 25 && (
-                    <Badge variant="outline" className="text-xs">⭐ 25% Complete</Badge>
-                  )}
-                  {progressPercentage >= 50 && (
-                    <Badge variant="outline" className="text-xs">🌟 Half Way There</Badge>
-                  )}
-                  {progressPercentage >= 75 && (
-                    <Badge variant="outline" className="text-xs">💫 Almost Done</Badge>
-                  )}
-                  {progressPercentage === 100 && (
-                    <Badge variant="outline" className="text-xs">🏆 Master</Badge>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Leaderboard Preview Card */}
-            <Card className="relative overflow-hidden hover:border-muted-foreground/20 transition-all duration-300">
-              <div className="absolute inset-0 bg-gradient-to-br from-accent/5 to-transparent" />
-              <CardHeader className="relative pb-3">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Users className="h-5 w-5 text-accent" />
-                  Leaderboard
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="relative space-y-4">
-                {/* Your Rank */}
-                <div className="p-4 bg-accent/10 rounded-lg text-center">
-                  <div className="text-sm text-muted-foreground mb-1">Your Rank</div>
-                  <div className="text-3xl font-bold text-accent">-</div>
-                  <div className="text-xs text-muted-foreground mt-1">Not ranked yet</div>
-                </div>
-
-                {/* Top Performers */}
-                <div className="space-y-2">
-                  <div className="text-sm font-medium text-muted-foreground">Top Performers</div>
-                  <div className="space-y-2">
-                    {[1, 2, 3].map((rank) => (
-                      <div key={rank} className="flex items-center justify-between p-2 rounded-lg bg-muted/50">
-                        <div className="flex items-center gap-2">
-                          <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold">
-                            {rank}
-                          </div>
-                          <span className="text-sm text-muted-foreground">-</span>
-                        </div>
-                        <span className="text-sm font-medium text-muted-foreground">- pts</span>
-                      </div>
-                    ))}
+                  <div>
+                    <div className="text-2xl font-bold tracking-tight text-foreground">{hackingNow}</div>
+                    <div className="text-sm font-medium text-muted-foreground">Hacking Now</div>
                   </div>
                 </div>
+              </div>
 
-                {/* Action Button */}
-                <Button variant="outline" className="w-full" asChild>
-                  <Link to="/leaderboard">View Full Leaderboard</Link>
-                </Button>
-              </CardContent>
-            </Card>
+              {/* Total Challenges */}
+              <div className="group">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-10 h-10 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center group-hover:bg-blue-500/20 transition-colors">
+                    <Target className="h-5 w-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <div className="text-2xl font-bold tracking-tight text-foreground">{totalChallenges}</div>
+                    <div className="text-sm font-medium text-muted-foreground">Challenges</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Unique Hackers */}
+              <div className="group">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-10 h-10 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center justify-center group-hover:bg-purple-500/20 transition-colors">
+                    <Users className="h-5 w-5 text-purple-600" />
+                  </div>
+                  <div>
+                    <div className="text-2xl font-bold tracking-tight text-foreground">{uniqueHackers}</div>
+                    <div className="text-sm font-medium text-muted-foreground">Unique Hackers</div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -360,6 +325,49 @@ export default function DojoDetail() {
               )
             })}
           </div>
+        </div>
+
+        {/* Leaderboard Section */}
+        <div className="mt-12">
+          <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
+            <Users className="h-6 w-6 text-primary" />
+            Leaderboard
+          </h2>
+
+          <Card className="relative overflow-hidden hover:border-muted-foreground/20 transition-all duration-300">
+            <div className="absolute inset-0 bg-gradient-to-br from-accent/5 to-transparent" />
+            <CardContent className="relative p-6 space-y-6">
+              {/* Your Rank */}
+              <div className="p-4 bg-accent/10 rounded-lg text-center">
+                <div className="text-sm text-muted-foreground mb-1">Your Rank</div>
+                <div className="text-3xl font-bold text-accent">-</div>
+                <div className="text-xs text-muted-foreground mt-1">Not ranked yet</div>
+              </div>
+
+              {/* Top Performers */}
+              <div className="space-y-2">
+                <div className="text-sm font-medium text-muted-foreground">Top Performers</div>
+                <div className="space-y-2">
+                  {[1, 2, 3].map((rank) => (
+                    <div key={rank} className="flex items-center justify-between p-2 rounded-lg bg-muted/50">
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold">
+                          {rank}
+                        </div>
+                        <span className="text-sm text-muted-foreground">-</span>
+                      </div>
+                      <span className="text-sm font-medium text-muted-foreground">- pts</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Action Button */}
+              <Button variant="outline" className="w-full" asChild>
+                <Link to="/leaderboard">View Full Leaderboard</Link>
+              </Button>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>

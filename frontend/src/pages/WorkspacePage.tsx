@@ -4,10 +4,13 @@ import { DojoWorkspaceLayout } from '@/components/layout/DojoWorkspaceLayout'
 import { HeaderProvider } from '@/contexts/HeaderContext'
 import { Loader2, AlertCircle, ArrowLeft } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { motion, AnimatePresence } from 'framer-motion'
+import { useState, useEffect } from 'react'
 
 export default function WorkspacePage() {
   const { dojoId, moduleId, challengeId } = useParams()
   const navigate = useNavigate()
+  const [isExiting, setIsExiting] = useState(false)
 
   const {
     data: dojosData,
@@ -89,28 +92,49 @@ export default function WorkspacePage() {
   }
 
   const handleChallengeClose = () => {
-    // Navigate back to the module page
-    navigate(`/dojo/${dojoId}/module/${moduleId}`)
+    // Start exit animation, then navigate
+    setIsExiting(true)
+    setTimeout(() => {
+      navigate(`/dojo/${dojoId}/module/${moduleId}`)
+    }, 200) // Duration should match the exit animation
   }
 
   return (
     <HeaderProvider>
-      <DojoWorkspaceLayout
-        dojo={{
-          id: dojoId!,
-          name: dojo?.name || dojoId!,
-          description: dojo?.description
-        }}
-        modules={layoutModules}
-        activeChallenge={{
-          dojoId: dojoId!,
-          moduleId: moduleId!,
-          challengeId: challengeId!,
-          name: challenge.name
-        }}
-        onChallengeStart={handleChallengeStart}
-        onChallengeClose={handleChallengeClose}
-      />
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={`workspace-${dojoId}-${moduleId}-${challengeId}`}
+          initial={{ opacity: 0, scale: 0.98, y: 20 }}
+          animate={{
+            opacity: isExiting ? 0 : 1,
+            scale: isExiting ? 0.98 : 1,
+            y: isExiting ? 20 : 0
+          }}
+          exit={{ opacity: 0, scale: 0.98, y: 20 }}
+          transition={{
+            duration: 0.2,
+            ease: [0.25, 0.46, 0.45, 0.94] // Custom ease for smooth feel
+          }}
+          className="h-screen w-full"
+        >
+          <DojoWorkspaceLayout
+            dojo={{
+              id: dojoId!,
+              name: dojo?.name || dojoId!,
+              description: dojo?.description
+            }}
+            modules={layoutModules}
+            activeChallenge={{
+              dojoId: dojoId!,
+              moduleId: moduleId!,
+              challengeId: challengeId!,
+              name: challenge.name
+            }}
+            onChallengeStart={handleChallengeStart}
+            onChallengeClose={handleChallengeClose}
+          />
+        </motion.div>
+      </AnimatePresence>
     </HeaderProvider>
   )
 }

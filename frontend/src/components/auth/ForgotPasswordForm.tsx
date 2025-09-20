@@ -6,7 +6,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Card, CardContent } from '@/components/ui/card'
-import { Shield, ArrowLeft, Mail, CheckCircle } from 'lucide-react'
+import { Logo } from '@/components/ui/Logo'
+import { ArrowLeft, Mail, CheckCircle } from 'lucide-react'
 
 export function ForgotPasswordForm() {
   const [email, setEmail] = useState('')
@@ -41,10 +42,9 @@ export function ForgotPasswordForm() {
       <div className="min-h-screen flex items-center justify-center bg-background px-4">
         <div className="w-full max-w-md space-y-6">
           {/* Header */}
-          <div className="text-center space-y-2">
-            <div className="flex items-center justify-center space-x-2">
-              <Shield className="h-8 w-8 text-primary" />
-              <span className="text-2xl font-bold text-foreground">DOJO</span>
+          <div className="text-center space-y-6">
+            <div className="flex justify-center mb-4">
+              <Logo textClassName="text-3xl" />
             </div>
           </div>
 
@@ -97,7 +97,7 @@ export function ForgotPasswordForm() {
               className="inline-flex items-center space-x-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
               <ArrowLeft className="h-4 w-4" />
-              <span>Back to DOJO</span>
+              <span>Back to pwn.college</span>
             </Link>
           </div>
         </div>
@@ -109,15 +109,16 @@ export function ForgotPasswordForm() {
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <div className="w-full max-w-md space-y-6">
         {/* Header */}
-        <div className="text-center space-y-2">
-          <div className="flex items-center justify-center space-x-2">
-            <Shield className="h-8 w-8 text-primary" />
-            <span className="text-2xl font-bold text-foreground">DOJO</span>
+        <div className="text-center space-y-6">
+          <div className="flex justify-center mb-4">
+            <Logo textClassName="text-3xl" />
           </div>
-          <h1 className="text-2xl font-semibold text-foreground">Forgot your password?</h1>
-          <p className="text-sm text-muted-foreground">
-            No worries! Enter your email and we'll send you a reset link.
-          </p>
+          <div className="space-y-2">
+            <h1 className="text-2xl font-semibold text-foreground">Forgot your password?</h1>
+            <p className="text-sm text-muted-foreground">
+              No worries! Enter your email and we'll send you a reset link.
+            </p>
+          </div>
         </div>
 
         {/* Main Form Card */}
@@ -194,7 +195,7 @@ export function ForgotPasswordForm() {
             className="inline-flex items-center space-x-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
             <ArrowLeft className="h-4 w-4" />
-            <span>Back to DOJO</span>
+            <span>Back to pwn.college</span>
           </Link>
         </div>
       </div>

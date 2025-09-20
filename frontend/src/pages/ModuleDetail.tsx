@@ -9,17 +9,17 @@ import { useDojoModules, useDojoSolves, useDojos } from '@/hooks/useDojo'
 import { useHeader } from '@/contexts/HeaderContext'
 import { ArrowLeft, CheckCircle, Circle, Loader2, Play } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { motion } from 'framer-motion'
 
 export default function ModuleDetail() {
   const { dojoId, moduleId } = useParams()
   const navigate = useNavigate()
   const { isHeaderHidden } = useHeader()
 
-  // State for challenge accordion (only one open at a time)
+  // State for challenge accordion (only one open at a time) - MUST be at the top
   const [openChallenge, setOpenChallenge] = useState<string | null>(null)
   const [headerOffset, setHeaderOffset] = useState(16) // Dynamic offset based on header position
   const [lastScrollY, setLastScrollY] = useState(0)
-
 
   const {
     data: dojosData,
@@ -150,7 +150,13 @@ export default function ModuleDetail() {
 
 
   return (
-    <div className="min-h-screen bg-background text-foreground p-6">
+    <motion.div
+      className="min-h-screen bg-background text-foreground p-6"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+      transition={{ duration: 0.2, ease: [0.25, 0.46, 0.45, 0.94] }}
+    >
       <div className="max-w-6xl mx-auto">
         <div className="mb-8">
           <Link
@@ -256,6 +262,6 @@ export default function ModuleDetail() {
 
         </div>
       </div>
-    </div>
+    </motion.div>
   )
 }

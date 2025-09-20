@@ -9,6 +9,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { Logo } from '@/components/ui/Logo'
 import { useIsAuthenticated, useLogout } from '@/hooks/useAuth'
 import {
   Menu, X, User, LogOut, Shield, Home, ChevronRight,
@@ -71,6 +72,16 @@ export function Header() {
     { name: 'Community', href: '/community', icon: Users, active: location.pathname === '/community' },
   ]
 
+  // Generate breadcrumbs based on current path
+  const breadcrumbs = []
+  if (location.pathname !== '/') {
+    breadcrumbs.push({ name: 'Home', href: '/' })
+
+    if (currentDojo) {
+      breadcrumbs.push({ name: currentDojo.name, href: `/dojo/${dojoId}` })
+    }
+  }
+
   return (
     <header className={cn(
       "sticky top-0 z-50 w-full border-b transition-all duration-300",
@@ -84,10 +95,7 @@ export function Header() {
         <div className="flex h-16 items-center justify-between">
           {/* Logo */}
           <div className="flex items-center space-x-6">
-            <Link to="/" className="flex items-center space-x-2 group">
-              <Shield className="h-6 w-6 text-primary transition-transform group-hover:scale-110" />
-              <span className="text-xl font-bold text-foreground">DOJO</span>
-            </Link>
+            <Logo />
 
             {/* Desktop Navigation */}
             <nav className="hidden lg:flex items-center space-x-1">
