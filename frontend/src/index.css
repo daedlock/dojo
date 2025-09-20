@@ -2,6 +2,7 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 
+
 :root {
   --background: oklch(0.9777 0.0041 301.4256);
   --foreground: oklch(0.3651 0.0325 287.0807);
@@ -650,4 +651,37 @@
     font-style: italic;
   }
 
+}
+
+@layer utilities {
+  /* Inline code */
+  .prose code::before,
+  .prose code::after {
+    content: none !important; /* remove the fake backticks */
+  }
+
+  .prose td { padding-left: 8px;}
+  .prose th { padding-left: 8px;}
+  .prose table {
+    border-radius: 8px;
+    border-collapse: separate !important;
+    border-spacing: 0 !important;
+    overflow: hidden;
+  }
+
+  /* First row of entire table */
+  .prose table > :first-child > tr:first-child > :first-child {
+    border-top-left-radius: 8px !important;
+  }
+  .prose table > :first-child > tr:first-child > :last-child {
+    border-top-right-radius: 8px !important;
+  }
+
+  /* Last row of entire table */
+  .prose table > :last-child > tr:last-child > :first-child {
+    border-bottom-left-radius: 8px !important;
+  }
+  .prose table > :last-child > tr:last-child > :last-child {
+    border-bottom-right-radius: 8px !important;
+  }
 }

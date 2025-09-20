@@ -1,6 +1,14 @@
 import { Link, useLocation, useParams } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { useIsAuthenticated, useLogout } from '@/hooks/useAuth'
 import {
   Menu, X, User, LogOut, Shield, Home, ChevronRight,
@@ -10,6 +18,7 @@ import {
 import { useState, useEffect } from 'react'
 import { ThemeSelector } from '@/components/ui/theme-selector'
 import { useDojos } from '@/hooks/useDojo'
+import { useHeader } from '@/contexts/HeaderContext'
 import { cn } from '@/lib/utils'
 
 export function Header() {
@@ -19,16 +28,35 @@ export function Header() {
   const location = useLocation()
   const { dojoId } = useParams()
   const { data: dojosData } = useDojos()
+  const { setHeaderHidden } = useHeader()
   const [scrolled, setScrolled] = useState(false)
+  const [hidden, setHidden] = useState(false)
+  const [lastScrollY, setLastScrollY] = useState(0)
 
-  // Track scroll position for navbar styling
+  // Track scroll position for navbar styling and hide/show behavior
   useEffect(() => {
     const handleScroll = () => {
-      setScrolled(window.scrollY > 10)
+      const currentScrollY = window.scrollY
+
+      setScrolled(currentScrollY > 10)
+
+      // Hide/show logic
+      if (currentScrollY > lastScrollY && currentScrollY > 100) {
+        // Scrolling down and past threshold
+        setHidden(true)
+        setHeaderHidden(true)
+      } else if (currentScrollY < lastScrollY) {
+        // Scrolling up
+        setHidden(false)
+        setHeaderHidden(false)
+      }
+
+      setLastScrollY(currentScrollY)
     }
-    window.addEventListener('scroll', handleScroll)
+
+    window.addEventListener('scroll', handleScroll, { passive: true })
     return () => window.removeEventListener('scroll', handleScroll)
-  }, [])
+  }, [lastScrollY])
 
   // Get current dojo info if we're on a dojo page
   const currentDojo = dojoId ? dojosData?.dojos?.find(d => d.id === dojoId) : null
@@ -45,63 +73,22 @@ export function Header() {
     { name: 'Community', href: '/community', icon: Users, active: location.pathname === '/community' },
   ]
 
-  // Breadcrumb navigation
-  const getBreadcrumbs = () => {
-    const crumbs = [{ name: 'DOJO', href: '/', icon: Shield }]
-
-    if (currentDojo) {
-      crumbs.push({ name: currentDojo.name, href: `/dojo/${dojoId}`, icon: BookOpen })
-    }
-
-    if (location.pathname.includes('/module/')) {
-      const moduleId = location.pathname.split('/module/')[1]?.split('/')[0]
-      if (moduleId) {
-        crumbs.push({ name: `Module ${moduleId}`, href: `#`, icon: Terminal })
-      }
-    }
-
-    return crumbs
-  }
-
-  const breadcrumbs = getBreadcrumbs()
-
   return (
     <header className={cn(
       "sticky top-0 z-50 w-full border-b transition-all duration-300",
       scrolled
         ? "border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-sm"
-        : "border-border/50 bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60"
+        : "border-border/50 bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60",
+      hidden ? "-translate-y-full" : "translate-y-0"
     )}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">
-          {/* Logo and Breadcrumbs */}
+          {/* Logo */}
           <div className="flex items-center space-x-6">
-            {breadcrumbs.length > 1 ? (
-              <nav className="flex items-center space-x-1 text-sm">
-                {breadcrumbs.map((crumb, index) => (
-                  <div key={crumb.href} className="flex items-center">
-                    {index > 0 && <ChevronRight className="h-4 w-4 mx-1 text-muted-foreground" />}
-                    <Link
-                      to={crumb.href}
-                      className={cn(
-                        "flex items-center space-x-1.5 px-2 py-1 rounded-md transition-colors",
-                        index === breadcrumbs.length - 1
-                          ? "text-foreground font-medium"
-                          : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-                      )}
-                    >
-                      <crumb.icon className="h-4 w-4" />
-                      <span>{crumb.name}</span>
-                    </Link>
-                  </div>
-                ))}
-              </nav>
-            ) : (
-              <Link to="/" className="flex items-center space-x-2 group">
-                <Shield className="h-6 w-6 text-primary transition-transform group-hover:scale-110" />
-                <span className="text-xl font-bold text-foreground">DOJO</span>
-              </Link>
-            )}
+            <Link to="/" className="flex items-center space-x-2 group">
+              <Shield className="h-6 w-6 text-primary transition-transform group-hover:scale-110" />
+              <span className="text-xl font-bold text-foreground">DOJO</span>
+            </Link>
 
             {/* Desktop Navigation */}
             <nav className="hidden lg:flex items-center space-x-1">
@@ -126,54 +113,73 @@ export function Header() {
           {/* Desktop Right Section */}
           <div className="hidden lg:flex items-center space-x-3">
             {/* Search Button */}
-            <Button variant="ghost" size="sm">
+            <Button variant="ghost" size="icon">
               <Search className="h-4 w-4" />
             </Button>
 
-            {/* Notifications */}
-            {isAuthenticated && (
-              <Button variant="ghost" size="sm" className="relative">
-                <Bell className="h-4 w-4" />
-                <span className="absolute top-0 right-0 h-2 w-2 bg-destructive rounded-full" />
-              </Button>
-            )}
-
             <div className="h-6 w-px bg-border" />
 
-            <ThemeSelector />
+            <Button variant="ghost" size="icon" asChild>
+              <ThemeSelector />
+            </Button>
             {isLoading ? (
               <div className="h-9 w-9 bg-muted animate-pulse rounded-full" />
             ) : isAuthenticated && user ? (
-              <div className="flex items-center space-x-2">
-                <Button variant="ghost" size="sm" className="relative group">
-                  <div className="flex items-center space-x-2">
-                    <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-                      <span className="text-sm font-medium text-primary">
-                        {user.name?.charAt(0).toUpperCase()}
-                      </span>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className="relative group">
+                    <div className="flex items-center space-x-2">
+                      <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                        <span className="text-sm font-medium text-primary">
+                          {user.name?.charAt(0).toUpperCase()}
+                        </span>
+                      </div>
+                      <div className="text-left hidden xl:block">
+                        <div className="text-sm font-medium text-foreground">{user.name}</div>
+                        <div className="text-xs text-muted-foreground">Level 5</div>
+                      </div>
                     </div>
-                    <div className="text-left hidden xl:block">
-                      <div className="text-sm font-medium text-foreground">{user.name}</div>
-                      <div className="text-xs text-muted-foreground">Level 5</div>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel className="font-normal">
+                    <div className="flex flex-col space-y-1">
+                      <p className="text-sm font-medium leading-none">{user.name}</p>
+                      <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
                     </div>
-                  </div>
-                </Button>
-
-                {user.admin && (
-                  <Badge variant="destructive" className="text-xs">
-                    Admin
-                  </Badge>
-                )}
-
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={handleLogout}
-                  disabled={logout.isPending}
-                >
-                  <LogOut className="h-4 w-4" />
-                </Button>
-              </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem>
+                    <User className="mr-2 h-4 w-4" />
+                    <span>Profile</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem>
+                    <Settings className="mr-2 h-4 w-4" />
+                    <span>Settings</span>
+                  </DropdownMenuItem>
+                  {user.admin && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem>
+                        <Shield className="mr-2 h-4 w-4" />
+                        <span>Admin Panel</span>
+                        <Badge variant="destructive" className="ml-auto text-xs">
+                          Admin
+                        </Badge>
+                      </DropdownMenuItem>
+                    </>
+                  )}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={handleLogout}
+                    disabled={logout.isPending}
+                    className="text-destructive focus:text-destructive"
+                  >
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Log out</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             ) : (
               <div className="flex items-center space-x-2">
                 <Button variant="ghost" size="sm" asChild>

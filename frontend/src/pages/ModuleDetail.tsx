@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
@@ -7,10 +7,13 @@ import { Button } from '@/components/ui/button'
 import { Markdown } from '@/components/ui/markdown'
 import { useDojoModules, useDojoSolves, useDojos } from '@/hooks/useDojo'
 import { DojoWorkspaceLayout } from '@/components/layout/DojoWorkspaceLayout'
-import { ArrowLeft, CheckCircle, Circle, Loader2, Play, ChevronDown, ChevronRight } from 'lucide-react'
+import { useHeader } from '@/contexts/HeaderContext'
+import { ArrowLeft, CheckCircle, Circle, Loader2, Play } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 export default function ModuleDetail() {
   const { dojoId, moduleId } = useParams()
+  const { isHeaderHidden } = useHeader()
 
   // State for active challenge
   const [activeChallenge, setActiveChallenge] = useState<{
@@ -23,6 +26,7 @@ export default function ModuleDetail() {
   // State for challenge accordion (only one open at a time)
   const [openChallenge, setOpenChallenge] = useState<string | null>(null)
 
+
   const {
     data: dojosData,
     isLoading: isLoadingDojo,
@@ -30,21 +34,94 @@ export default function ModuleDetail() {
   } = useDojos()
 
   const {
-    data: modulesData,
+    data: modulesResponse,
     isLoading: isLoadingModules,
     error: modulesError
-  } = useDojoModules(dojoId || '', !!dojoId && !!moduleId)
+  } = useDojoModules(dojoId || '')
 
   const {
-    data: solvesData
-  } = useDojoSolves(dojoId || '', undefined, !!dojoId && !!moduleId)
+    data: solvesResponse,
+    isLoading: isLoadingSolves,
+    error: solvesError
+  } = useDojoSolves(dojoId || '')
 
-  // Handle challenge start
+  // Find the specific dojo
+  const dojo = Array.isArray(dojosData)
+    ? dojosData.find(d => d.id === dojoId)
+    : dojosData?.dojos?.find(d => d.id === dojoId)
+
+  // Get modules array from response
+  const modules = modulesResponse?.modules || []
+
+  // Find the specific module
+  const module = modules.find(m => m.id === moduleId)
+
+  // Get solves array from response
+  const solves = solvesResponse?.solves || []
+
+
+
+  if (isLoadingDojo || isLoadingModules || isLoadingSolves) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    )
+  }
+
+  if (dojoError || modulesError || solvesError) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold mb-2">Error loading module</h2>
+          <p className="text-muted-foreground">
+            {dojoError?.message || modulesError?.message || solvesError?.message}
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!module) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold mb-2">Module not found</h2>
+          <p className="text-muted-foreground">
+            The requested module "{moduleId}" could not be found in dojo "{dojoId}".
+          </p>
+          <p className="text-xs text-muted-foreground mt-2">
+            Available modules: {modules.length > 0 ? modules.map(m => m.id).join(', ') : 'None'}
+          </p>
+          <Link
+            to={`/dojo/${dojoId}`}
+            className="mt-4 inline-flex items-center text-primary hover:underline"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to {dojoId}
+          </Link>
+        </div>
+      </div>
+    )
+  }
+
+  // Get solved challenge IDs for this dojo/module
+  const solvedChallengeIds = new Set(
+    solves
+      ?.filter(solve => solve.dojo_id === dojoId && solve.module_id === moduleId)
+      .map(solve => solve.challenge_id) || []
+  )
+
+  const completedChallenges = module.challenges.filter(
+    challenge => solvedChallengeIds.has(challenge.id)
+  ).length
+
+  const toggleChallenge = (challengeId: string) => {
+    setOpenChallenge(openChallenge === challengeId ? null : challengeId)
+  }
+
   const handleChallengeStart = (dojoId: string, moduleId: string, challengeId: string) => {
-    const modules = modulesData?.modules || []
-    const module = modules.find(m => m.id === moduleId)
-    const challenge = module?.challenges?.find(c => c.id === challengeId)
-
+    const challenge = module.challenges.find(c => c.id === challengeId)
     if (challenge) {
       setActiveChallenge({
         dojoId,
@@ -55,78 +132,11 @@ export default function ModuleDetail() {
     }
   }
 
-  // Handle challenge close
   const handleChallengeClose = () => {
     setActiveChallenge(undefined)
   }
 
-  // Handle challenge accordion toggle (only one open at a time)
-  const toggleChallenge = (challengeId: string) => {
-    setOpenChallenge(prev => prev === challengeId ? null : challengeId)
-  }
-
-  if (!dojoId || !moduleId) {
-    return (
-      <div className="min-h-screen bg-background text-foreground p-6 flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">Module not found</h1>
-          <Link to="/">
-            <Button variant="outline">Back to Dojos</Button>
-          </Link>
-        </div>
-      </div>
-    )
-  }
-
-  if (isLoadingDojo || isLoadingModules) {
-    return (
-      <div className="min-h-screen bg-background text-foreground p-6 flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-          <p>Loading module...</p>
-        </div>
-      </div>
-    )
-  }
-
-  if (dojoError || modulesError || !modulesData?.success) {
-    return (
-      <div className="min-h-screen bg-background text-foreground p-6 flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">Failed to load module</h1>
-          <Link to={`/dojo/${dojoId}`}>
-            <Button variant="outline">Back to Dojo</Button>
-          </Link>
-        </div>
-      </div>
-    )
-  }
-
-  const modules = modulesData.modules || []
-  const module = modules.find(m => m.id === moduleId)
-  const solves = solvesData?.solves || []
-  const dojo = dojosData?.dojos?.find(d => d.id === dojoId)
-
-  if (!module) {
-    return (
-      <div className="min-h-screen bg-background text-foreground p-6 flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">Module not found</h1>
-          <Link to={`/dojo/${dojoId}`}>
-            <Button variant="outline">Back to Dojo</Button>
-          </Link>
-        </div>
-      </div>
-    )
-  }
-
-  // Create a set of solved challenge IDs for quick lookup
-  const solvedChallengeIds = new Set(solves.map(solve => solve.challenge_id))
-  const completedChallenges = module.challenges.filter(
-    challenge => solvedChallengeIds.has(challenge.id)
-  ).length
-
-  // Transform modules data for the layout component - only include current module
+  // Transform module data for DojoWorkspaceLayout
   const layoutModules = [{
     id: module.id,
     name: module.name,
@@ -134,9 +144,15 @@ export default function ModuleDetail() {
     challenges: (module.challenges || []).map(challenge => ({
       id: challenge.id,
       name: challenge.name,
-      solved: solvedChallengeIds.has(challenge.id),
+      description: challenge.description || '',
+      points: challenge.points || 0,
+      solves: challenge.solves || 0,
       required: challenge.required || false,
-      description: challenge.description
+      status: solvedChallengeIds.has(challenge.id) ? 'solved' as const : 'unsolved' as const,
+      resources: challenge.resources || [],
+      module_id: module.id,
+      notebook: challenge.notebook || '',
+      requirements: challenge.requirements || []
     }))
   }]
 
@@ -161,17 +177,17 @@ export default function ModuleDetail() {
     <div className="min-h-screen bg-background text-foreground p-6">
       <div className="max-w-6xl mx-auto">
         <div className="mb-8">
-          <Link 
-            to={`/dojo/${dojoId}`} 
+          <Link
+            to={`/dojo/${dojoId}`}
             className="inline-flex items-center text-muted-foreground hover:text-foreground mb-4"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to {dojoId}
           </Link>
-          
+
           <div className="mb-6">
             <h1 className="text-4xl font-bold mb-2">{module.name}</h1>
-            
+
             <div className="flex items-center gap-4">
               <Badge variant="outline">{dojoId}</Badge>
               <span className="text-sm text-muted-foreground">
@@ -183,92 +199,82 @@ export default function ModuleDetail() {
 
         <div className="space-y-8">
           {module.description && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Module Description</CardTitle>
-              </CardHeader>
-              <CardContent>
                 <Markdown>{module.description}</Markdown>
-              </CardContent>
-            </Card>
           )}
 
-          <div>
+          <div className="mt-12">
             <h2 className="text-2xl font-bold mb-6">Challenges</h2>
             <div className="space-y-3">
-            {module.challenges.map((challenge, index) => {
-              const isSolved = solvedChallengeIds.has(challenge.id)
-              const isOpen = openChallenge === challenge.id
+              {module.challenges.map((challenge, index) => {
+                const isSolved = solvedChallengeIds.has(challenge.id)
+                const isOpen = openChallenge === challenge.id
 
-              return (
-                <Card key={challenge.id} className="overflow-hidden hover:border-primary/50 transition-all duration-200">
-                  <Collapsible open={isOpen} onOpenChange={() => toggleChallenge(challenge.id)}>
-                    <CollapsibleTrigger asChild>
-                      <CardHeader className="pb-3 pt-4 cursor-pointer hover:bg-primary/5 transition-colors group">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-medium text-primary flex-shrink-0">
-                              {index + 1}
+                return (
+                  <Card key={challenge.id} className="hover:border-primary/50 transition-all duration-200 relative">
+                    <Collapsible open={isOpen} onOpenChange={() => setOpenChallenge(isOpen ? null : challenge.id)}>
+                      <CollapsibleTrigger asChild>
+                        <CardHeader
+                          className={cn(
+                            "pb-3 pt-4 cursor-pointer group",
+                            isOpen && "sticky z-40 bg-card rounded-t-xl border-b shadow-sm transition-all duration-300",
+                            isOpen && (isHeaderHidden ? "top-0" : "top-16")
+                          )}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-medium text-primary flex-shrink-0">
+                                {index + 1}
+                              </div>
+                              <div className="flex items-center gap-2">
+                                {isSolved ? (
+                                  <CheckCircle className="h-4 w-4 text-green-500" />
+                                ) : (
+                                  <Circle className="h-4 w-4 text-muted-foreground" />
+                                )}
+                                <CardTitle className="text-lg group-hover:text-primary transition-colors">{challenge.name}</CardTitle>
+                                {challenge.required && (
+                                  <Badge variant="secondary" className="text-xs ml-2">Required</Badge>
+                                )}
+                              </div>
                             </div>
-                            <div className="flex items-center gap-2">
-                              {isSolved ? (
-                                <CheckCircle className="h-4 w-4 text-green-500" />
-                              ) : (
-                                <Circle className="h-4 w-4 text-muted-foreground" />
-                              )}
-                              <CardTitle className="text-lg group-hover:text-primary transition-colors">{challenge.name}</CardTitle>
-                              {challenge.required && (
-                                <Badge variant="secondary" className="text-xs ml-2">Required</Badge>
-                              )}
+                            <div className="flex items-center gap-3">
+                              <Button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleChallengeStart(dojoId, moduleId, challenge.id)
+                                }}
+                                size="sm"
+                                variant={isSolved ? "outline" : "default"}
+                                className={cn(
+                                  "transition-opacity",
+                                  isOpen ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                                )}
+                              >
+                                {isSolved ? "Review" : "Start"}
+                                <Play className="h-3 w-3 ml-1" />
+                              </Button>
                             </div>
                           </div>
-                          <div className="flex items-center gap-3">
-                            <Button
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                handleChallengeStart(dojoId, moduleId, challenge.id)
-                              }}
-                              size="sm"
-                              variant={isSolved ? "outline" : "default"}
-                              className="opacity-0 group-hover:opacity-100 transition-opacity"
-                            >
-                              {isSolved ? "Review" : "Start"}
-                              <Play className="h-3 w-3 ml-1" />
-                            </Button>
-                            {isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                          </div>
-                        </div>
-                      </CardHeader>
-                    </CollapsibleTrigger>
+                        </CardHeader>
+                      </CollapsibleTrigger>
 
-                    <CollapsibleContent>
-                      <CardContent className="pt-0 border-t">
-                        {challenge.description && (
-                          <div className="mb-4">
-                            <Markdown className="prose-sm">{challenge.description}</Markdown>
-                          </div>
-                        )}
 
-                        <div className="flex items-center justify-between pt-4">
-                          <div className="text-sm text-muted-foreground">
-                            {isSolved ? 'Challenge completed' : 'Ready to start'}
-                          </div>
-                          <Button
-                            onClick={() => handleChallengeStart(dojoId, moduleId, challenge.id)}
-                            variant={isSolved ? "outline" : "default"}
-                          >
-                            {isSolved ? "Review Challenge" : "Start Challenge"}
-                            <Play className="h-4 w-4 ml-2" />
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </CollapsibleContent>
-                  </Collapsible>
-                </Card>
-              )
-            })}
+                      <CollapsibleContent>
+                        <CardContent className=" border-t">
+                          {challenge.description && (
+                            <div className="prose prose-sm dark:prose-invert max-w-none">
+                              <Markdown>{challenge.description}</Markdown>
+                            </div>
+                          )}
+                        </CardContent>
+                      </CollapsibleContent>
+                    </Collapsible>
+                  </Card>
+                )
+              })}
             </div>
           </div>
+
         </div>
       </div>
     </div>

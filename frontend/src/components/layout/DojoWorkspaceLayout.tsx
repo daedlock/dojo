@@ -2,7 +2,13 @@ import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { ScrollArea } from '@/components/ui/scroll-area'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
 import {
   ChevronDown,
   ChevronRight,
@@ -13,7 +19,8 @@ import {
   Terminal,
   Code,
   Monitor,
-  Flag
+  Flag,
+  Info
 } from 'lucide-react'
 import { useWorkspace } from '@/hooks/useWorkspace'
 import { useStartChallenge } from '@/hooks/useDojo'
@@ -62,7 +69,6 @@ export function DojoWorkspaceLayout({
   onChallengeClose
 }: DojoWorkspaceLayoutProps) {
   const [openModule, setOpenModule] = useState<string | null>(null)
-  const [openChallenge, setOpenChallenge] = useState<string | null>(null)
   const [activeService, setActiveService] = useState<string>('flag')
 
   const startChallengeMutation = useStartChallenge()
@@ -77,12 +83,6 @@ export function DojoWorkspaceLayout({
 
   const toggleModule = (moduleId: string) => {
     setOpenModule(openModule === moduleId ? null : moduleId)
-    // Close any open challenge when switching modules
-    setOpenChallenge(null)
-  }
-
-  const toggleChallenge = (challengeId: string) => {
-    setOpenChallenge(openChallenge === challengeId ? null : challengeId)
   }
 
   const handleChallengeStart = async (moduleId: string, challengeId: string) => {
@@ -243,10 +243,13 @@ export function DojoWorkspaceLayout({
   return (
     <div className="flex h-screen">
       {/* Sidebar - Challenge List */}
-      <div className="w-80 border-r bg-background overflow-y-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-border hover:scrollbar-thumb-muted-foreground">
-        <div className="p-4 border-b">
+      <div className="w-80 border-r bg-background flex flex-col h-full">
+        <div className="border-b p-4">
           <div className="flex items-center justify-between">
-            <h2 className="font-semibold">{dojo.name}</h2>
+            <div>
+              <h2 className="text-xl font-semibold">{dojo.name}</h2>
+              <p className="text-sm text-muted-foreground">Challenge List</p>
+            </div>
             <Button
               variant="ghost"
               size="sm"
@@ -257,111 +260,124 @@ export function DojoWorkspaceLayout({
           </div>
         </div>
 
-        <div className="p-4">
-          {modules.map((module) => (
-            <Collapsible
-              key={module.id}
-              open={openModule === module.id}
-              onOpenChange={() => toggleModule(module.id)}
-            >
-              <CollapsibleTrigger asChild>
-                <div className="flex items-center gap-2 p-2 hover:bg-muted rounded cursor-pointer">
-                  {openModule === module.id ? (
-                    <ChevronDown className="h-4 w-4" />
-                  ) : (
-                    <ChevronRight className="h-4 w-4" />
-                  )}
-                  <span className="font-medium text-sm">{module.name}</span>
-                </div>
-              </CollapsibleTrigger>
+        <ScrollArea className="flex-1 h-full">
+          <div className="p-4 pr-6 h-full">
+            {modules.map((module) => (
+              <Collapsible
+                key={module.id}
+                open={openModule === module.id}
+                onOpenChange={() => toggleModule(module.id)}
+              >
+                <CollapsibleTrigger asChild>
+                  <div className="flex items-center gap-2 p-2 hover:bg-muted rounded cursor-pointer">
+                    {openModule === module.id ? (
+                      <ChevronDown className="h-4 w-4" />
+                    ) : (
+                      <ChevronRight className="h-4 w-4" />
+                    )}
+                    <span className="font-medium text-sm">{module.name}</span>
+                  </div>
+                </CollapsibleTrigger>
 
-              <CollapsibleContent>
-                <div className="ml-6 mt-2 space-y-1">
-                  {module.challenges.map((challenge) => {
-                    const isActive = activeChallenge.moduleId === module.id &&
-                                   activeChallenge.challengeId === challenge.id
+                <CollapsibleContent>
+                  <div className="ml-6 mt-2 space-y-1">
+                    {module.challenges.map((challenge) => {
+                      const isActive = activeChallenge.moduleId === module.id &&
+                                     activeChallenge.challengeId === challenge.id
 
-                    return (
-                      <Collapsible
-                        key={challenge.id}
-                        open={openChallenge === challenge.id}
-                        onOpenChange={() => toggleChallenge(challenge.id)}
-                      >
-                        <div className="space-y-1">
-                          <CollapsibleTrigger asChild>
-                            <div
-                              className={`flex items-center justify-between gap-2 p-2 rounded text-sm cursor-pointer transition-colors ${
-                                isActive
-                                  ? 'bg-primary text-primary-foreground'
-                                  : 'hover:bg-muted'
-                              }`}
-                            >
-                              <div className="flex items-center gap-2 min-w-0">
-                                {challenge.solved ? (
-                                  <CheckCircle className="h-3 w-3 flex-shrink-0" />
-                                ) : (
-                                  <Circle className="h-3 w-3 flex-shrink-0 text-muted-foreground" />
-                                )}
-                                <span className="truncate">{challenge.name}</span>
-                              </div>
-                              <div className="flex items-center gap-1">
-                                {!isActive && (
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-6 w-6 p-0"
-                                    onClick={(e) => {
-                                      e.stopPropagation()
-                                      handleChallengeStart(module.id, challenge.id)
-                                    }}
-                                  >
-                                    <Play className="h-3 w-3" />
-                                  </Button>
-                                )}
-                                {openChallenge === challenge.id ? (
-                                  <ChevronDown className="h-3 w-3 flex-shrink-0" />
-                                ) : (
-                                  <ChevronRight className="h-3 w-3 flex-shrink-0" />
-                                )}
-                              </div>
-                            </div>
-                          </CollapsibleTrigger>
+                      return (
+                        <div
+                          key={challenge.id}
+                          className={`flex items-center justify-between gap-2 p-2 rounded text-sm transition-colors ${
+                            isActive
+                              ? 'bg-primary text-primary-foreground'
+                              : 'hover:bg-muted'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            {challenge.solved ? (
+                              <CheckCircle className="h-3 w-3 flex-shrink-0" />
+                            ) : (
+                              <Circle className="h-3 w-3 flex-shrink-0 text-muted-foreground" />
+                            )}
+                            <span className="truncate">{challenge.name}</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 w-6 p-0"
+                                >
+                                  <Info className="h-3 w-3" />
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-80" align="end">
+                                <div className="space-y-3">
+                                  <div>
+                                    <h4 className="font-semibold">{challenge.name}</h4>
+                                    <div className="flex gap-2 mt-1">
+                                      {challenge.required && (
+                                        <Badge variant="secondary" className="text-xs">
+                                          Required
+                                        </Badge>
+                                      )}
+                                      {challenge.difficulty && (
+                                        <Badge variant="outline" className="text-xs">
+                                          {challenge.difficulty}
+                                        </Badge>
+                                      )}
+                                      {challenge.points && (
+                                        <Badge variant="outline" className="text-xs">
+                                          {challenge.points} pts
+                                        </Badge>
+                                      )}
+                                    </div>
+                                  </div>
 
-                          <CollapsibleContent>
-                            <div className="ml-6 p-2 text-xs text-muted-foreground bg-muted/30 rounded">
-                              {challenge.description && (
-                                <div className="mb-2">
-                                  <Markdown className="text-xs">{challenge.description}</Markdown>
+                                  {challenge.description && (
+                                    <div className="text-sm text-muted-foreground">
+                                      <Markdown className="text-sm">{challenge.description}</Markdown>
+                                    </div>
+                                  )}
+
+                                  {!isActive && (
+                                    <Button
+                                      onClick={() => handleChallengeStart(module.id, challenge.id)}
+                                      disabled={startChallengeMutation.isPending}
+                                      size="sm"
+                                      className="w-full"
+                                    >
+                                      <Play className="h-3 w-3 mr-2" />
+                                      Start Challenge
+                                    </Button>
+                                  )}
                                 </div>
-                              )}
-                              <div className="flex gap-2">
-                                {challenge.difficulty && (
-                                  <Badge variant="outline" className="text-xs h-5">
-                                    {challenge.difficulty}
-                                  </Badge>
-                                )}
-                                {challenge.points && (
-                                  <Badge variant="outline" className="text-xs h-5">
-                                    {challenge.points} pts
-                                  </Badge>
-                                )}
-                                {challenge.required && (
-                                  <Badge variant="secondary" className="text-xs h-5">
-                                    Required
-                                  </Badge>
-                                )}
-                              </div>
-                            </div>
-                          </CollapsibleContent>
+                              </PopoverContent>
+                            </Popover>
+
+                            {!isActive && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 w-6 p-0"
+                                onClick={() => handleChallengeStart(module.id, challenge.id)}
+                                disabled={startChallengeMutation.isPending}
+                              >
+                                <Play className="h-3 w-3" />
+                              </Button>
+                            )}
+                          </div>
                         </div>
-                      </Collapsible>
-                    )
-                  })}
-                </div>
-              </CollapsibleContent>
-            </Collapsible>
-          ))}
-        </div>
+                      )
+                    })}
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+            ))}
+          </div>
+        </ScrollArea>
       </div>
 
       {/* Main Workspace Area */}
