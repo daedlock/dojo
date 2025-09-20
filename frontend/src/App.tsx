@@ -6,6 +6,7 @@ import { Layout } from '@/components/layout/Layout'
 import DojoList from '@/pages/DojoList'
 import DojoDetail from '@/pages/DojoDetail'
 import ModuleDetail from '@/pages/ModuleDetail'
+import WorkspacePage from '@/pages/WorkspacePage'
 import LeaderboardPage from '@/pages/LeaderboardPage'
 import CommunityPage from '@/pages/CommunityPage'
 import LoginPage from '@/pages/LoginPage'
@@ -22,6 +23,7 @@ function App() {
             <Route path="/" element={<Layout><DojoList /></Layout>} />
             <Route path="/dojo/:dojoId" element={<Layout><DojoDetail /></Layout>} />
             <Route path="/dojo/:dojoId/module/:moduleId" element={<Layout><ModuleDetail /></Layout>} />
+            <Route path="/dojo/:dojoId/module/:moduleId/challenge/:challengeId" element={<WorkspacePage />} />
             <Route path="/leaderboard" element={<Layout><LeaderboardPage /></Layout>} />
             <Route path="/community" element={<Layout><CommunityPage /></Layout>} />
 

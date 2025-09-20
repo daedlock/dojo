@@ -28,7 +28,7 @@ export function Header() {
   const location = useLocation()
   const { dojoId } = useParams()
   const { data: dojosData } = useDojos()
-  const { setHeaderHidden } = useHeader()
+  const { isHeaderHidden, setHeaderHidden } = useHeader()
   const [scrolled, setScrolled] = useState(false)
   const [hidden, setHidden] = useState(false)
   const [lastScrollY, setLastScrollY] = useState(0)
@@ -40,15 +40,13 @@ export function Header() {
 
       setScrolled(currentScrollY > 10)
 
-      // Hide/show logic
+      // Hide/show logic - only affect scroll-based hiding, not HeaderContext
       if (currentScrollY > lastScrollY && currentScrollY > 100) {
         // Scrolling down and past threshold
         setHidden(true)
-        setHeaderHidden(true)
       } else if (currentScrollY < lastScrollY) {
         // Scrolling up
         setHidden(false)
-        setHeaderHidden(false)
       }
 
       setLastScrollY(currentScrollY)
@@ -79,7 +77,8 @@ export function Header() {
       scrolled
         ? "border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-sm"
         : "border-border/50 bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60",
-      hidden ? "-translate-y-full" : "translate-y-0"
+      // HeaderContext hiding takes priority over scroll hiding
+      isHeaderHidden ? "hidden" : (hidden ? "-translate-y-full" : "translate-y-0")
     )}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">

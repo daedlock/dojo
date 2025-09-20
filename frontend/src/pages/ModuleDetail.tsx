@@ -1,30 +1,24 @@
 import { useState, useRef, useEffect } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useParams, useNavigate } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Markdown } from '@/components/ui/markdown'
 import { useDojoModules, useDojoSolves, useDojos } from '@/hooks/useDojo'
-import { DojoWorkspaceLayout } from '@/components/layout/DojoWorkspaceLayout'
 import { useHeader } from '@/contexts/HeaderContext'
 import { ArrowLeft, CheckCircle, Circle, Loader2, Play } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 export default function ModuleDetail() {
   const { dojoId, moduleId } = useParams()
+  const navigate = useNavigate()
   const { isHeaderHidden } = useHeader()
-
-  // State for active challenge
-  const [activeChallenge, setActiveChallenge] = useState<{
-    dojoId: string
-    moduleId: string
-    challengeId: string
-    name: string
-  } | undefined>(undefined)
 
   // State for challenge accordion (only one open at a time)
   const [openChallenge, setOpenChallenge] = useState<string | null>(null)
+  const [headerOffset, setHeaderOffset] = useState(16) // Dynamic offset based on header position
+  const [lastScrollY, setLastScrollY] = useState(0)
 
 
   const {
@@ -121,57 +115,39 @@ export default function ModuleDetail() {
   }
 
   const handleChallengeStart = (dojoId: string, moduleId: string, challengeId: string) => {
-    const challenge = module.challenges.find(c => c.id === challengeId)
-    if (challenge) {
-      setActiveChallenge({
-        dojoId,
-        moduleId,
-        challengeId,
-        name: challenge.name
-      })
+    // Navigate to the dedicated workspace route
+    navigate(`/dojo/${dojoId}/module/${moduleId}/challenge/${challengeId}`)
+  }
+
+  // Track header position and calculate dynamic offset - match Header.tsx logic exactly
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY
+
+      // If HeaderContext says header is hidden, offset is 0
+      if (isHeaderHidden) {
+        setHeaderOffset(0)
+        setLastScrollY(currentScrollY)
+        return
+      }
+
+      // Match the exact header hide/show logic from Header.tsx
+      if (currentScrollY > lastScrollY && currentScrollY > 100) {
+        // Scrolling down and past threshold - header hidden
+        setHeaderOffset(0)
+      } else if (currentScrollY < lastScrollY) {
+        // Scrolling up - header visible
+        setHeaderOffset(16)
+      }
+      // If scrollY === lastScrollY, keep current offset
+
+      setLastScrollY(currentScrollY)
     }
-  }
 
-  const handleChallengeClose = () => {
-    setActiveChallenge(undefined)
-  }
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [lastScrollY, isHeaderHidden])
 
-  // Transform module data for DojoWorkspaceLayout
-  const layoutModules = [{
-    id: module.id,
-    name: module.name,
-    description: module.description,
-    challenges: (module.challenges || []).map(challenge => ({
-      id: challenge.id,
-      name: challenge.name,
-      description: challenge.description || '',
-      points: challenge.points || 0,
-      solves: challenge.solves || 0,
-      required: challenge.required || false,
-      status: solvedChallengeIds.has(challenge.id) ? 'solved' as const : 'unsolved' as const,
-      resources: challenge.resources || [],
-      module_id: module.id,
-      notebook: challenge.notebook || '',
-      requirements: challenge.requirements || []
-    }))
-  }]
-
-  // If there's an active challenge, show the workspace layout
-  if (activeChallenge) {
-    return (
-      <DojoWorkspaceLayout
-        dojo={{
-          id: dojoId,
-          name: dojo?.name || dojoId,
-          description: dojo?.description
-        }}
-        modules={layoutModules}
-        activeChallenge={activeChallenge}
-        onChallengeStart={handleChallengeStart}
-        onChallengeClose={handleChallengeClose}
-      />
-    )
-  }
 
   return (
     <div className="min-h-screen bg-background text-foreground p-6">
@@ -216,9 +192,12 @@ export default function ModuleDetail() {
                         <CardHeader
                           className={cn(
                             "pb-3 pt-4 cursor-pointer group",
-                            isOpen && "sticky z-40 bg-card rounded-t-xl border-b shadow-sm transition-all duration-300",
-                            isOpen && (isHeaderHidden ? "top-0" : "top-16")
+                            isOpen && "sticky z-40 bg-card rounded-t-xl border-b shadow-sm transition-all duration-300"
                           )}
+                          style={{
+                            top: isOpen ? `${headerOffset * 0.25}rem` : undefined, // Convert to rem
+                            transition: 'top 0.3s ease-out'
+                          }}
                         >
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3">

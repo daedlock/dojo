@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { useDojoModules, useDojoSolves, useDojos } from '@/hooks/useDojo'
-import { DojoWorkspaceLayout } from '@/components/layout/DojoWorkspaceLayout'
 import { Markdown } from '@/components/ui/markdown'
 import { Loader2, AlertCircle, ArrowLeft, BookOpen, Users, Trophy, Clock, Target, Play, CheckCircle, ChevronRight } from 'lucide-react'
 
@@ -12,13 +11,6 @@ export default function DojoDetail() {
   const { dojoId } = useParams()
   const navigate = useNavigate()
 
-  // State for active challenge
-  const [activeChallenge, setActiveChallenge] = useState<{
-    dojoId: string
-    moduleId: string
-    challengeId: string
-    name: string
-  } | undefined>(undefined)
 
   // State for description expansion
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false)
@@ -40,25 +32,6 @@ export default function DojoDetail() {
     data: solvesData
   } = useDojoSolves(dojoId || '', undefined, !!dojoId)
 
-  // Handle challenge start
-  const handleChallengeStart = (dojoId: string, moduleId: string, challengeId: string) => {
-    const module = modulesData?.modules?.find(m => m.id === moduleId)
-    const challenge = module?.challenges?.find(c => c.id === challengeId)
-
-    if (challenge) {
-      setActiveChallenge({
-        dojoId,
-        moduleId,
-        challengeId,
-        name: challenge.name
-      })
-    }
-  }
-
-  // Handle challenge close
-  const handleChallengeClose = () => {
-    setActiveChallenge(undefined)
-  }
 
 
   if (!dojoId) {
@@ -105,6 +78,8 @@ export default function DojoDetail() {
   const solves = solvesData?.solves || []
   const dojo = dojosData?.dojos?.find(d => d.id === dojoId)
 
+  console.log('Debug DojoDetail:', { modules, modulesData, dojo, dojoId })
+
   // Create a set of solved challenge IDs for quick lookup
   const solvedChallengeIds = new Set(solves.map(solve => solve.challenge_id))
 
@@ -113,36 +88,6 @@ export default function DojoDetail() {
   const solvedCount = solves.length
   const progressPercentage = totalChallenges > 0 ? Math.round((solvedCount / totalChallenges) * 100) : 0
 
-  // Transform modules data for the layout component
-  const layoutModules = modules.map(module => ({
-    id: module.id,
-    name: module.name,
-    description: module.description,
-    challenges: (module.challenges || []).map(challenge => ({
-      id: challenge.id,
-      name: challenge.name,
-      solved: solvedChallengeIds.has(challenge.id),
-      required: challenge.required || false,
-      description: challenge.description
-    }))
-  }))
-
-  // If there's an active challenge, show the workspace layout
-  if (activeChallenge) {
-    return (
-      <DojoWorkspaceLayout
-        dojo={{
-          id: dojoId,
-          name: dojo?.name || dojoId,
-          description: dojo?.description
-        }}
-        modules={layoutModules}
-        activeChallenge={activeChallenge}
-        onChallengeStart={handleChallengeStart}
-        onChallengeClose={handleChallengeClose}
-      />
-    )
-  }
 
   const getDojoIcon = (dojo: any) => {
     // If dojo has an award with a belt, use the belt SVG
