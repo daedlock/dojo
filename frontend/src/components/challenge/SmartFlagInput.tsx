@@ -1,12 +1,16 @@
 import { useState, useEffect, useRef } from 'react'
-import { Flag, Check, X, Loader2 } from 'lucide-react'
+import { Flag, Check, X, Loader2, Send } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover'
 import { cn } from '@/lib/utils'
+import { useSubmitChallengeSolution } from '@/hooks/useDojo'
+import { useDojoStore } from '@/stores'
+import { motion, AnimatePresence } from 'framer-motion'
 
 interface SmartFlagInputProps {
   dojoId: string
@@ -22,11 +26,14 @@ export function SmartFlagInput({
   onFlagSubmit
 }: SmartFlagInputProps) {
   const [value, setValue] = useState('')
-  const [isSubmitting, setIsSubmitting] = useState(false)
   const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle')
   const [message, setMessage] = useState('')
   const [showFeedback, setShowFeedback] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+
+  const submitSolution = useSubmitChallengeSolution()
+  const isSubmitting = submitSolution.isPending
+  const addSolve = useDojoStore(state => state.addSolve)
 
   // Flag pattern validation
   const flagPattern = /^pwn\.college\{[^}]+\}$/
@@ -35,48 +42,90 @@ export function SmartFlagInput({
   const submitFlag = async (flag: string) => {
     if (!flag.trim() || isSubmitting) return
 
-    setIsSubmitting(true)
     setStatus('idle')
 
     try {
-      // Mock submission - replace with actual API call
-      const result = onFlagSubmit
-        ? await onFlagSubmit(flag)
-        : await mockFlagSubmission(flag)
+      // Use custom onFlagSubmit if provided, otherwise use real API
+      if (onFlagSubmit) {
+        const result = await onFlagSubmit(flag)
+        setStatus(result.success ? 'success' : 'error')
+        setMessage(result.message)
+        setShowFeedback(true)
 
-      setStatus(result.success ? 'success' : 'error')
-      setMessage(result.message)
-      setShowFeedback(true)
+        // Add solve to store if successful
+        if (result.success) {
+          addSolve(dojoId, moduleId, challengeId)
+        }
 
-      if (result.success) {
         setValue('')
-        // Auto-hide success feedback after 3 seconds
-        setTimeout(() => setShowFeedback(false), 3000)
+        setTimeout(() => {
+          setShowFeedback(false)
+          setStatus('idle')
+          setMessage('')
+        }, 3000)
       } else {
-        // Auto-hide error feedback after 5 seconds
-        setTimeout(() => setShowFeedback(false), 5000)
+        // Use real flag submission API
+        const submissionData = {
+          dojoId,
+          moduleId,
+          challengeId,
+          submission: { submission: flag.trim() }
+        }
+
+        const result = await submitSolution.mutateAsync(submissionData)
+
+        if (result.success) {
+          if (result.status === 'authentication_required') {
+            setStatus('error')
+            setMessage('Authentication required. Please log in.')
+          } else if (result.status === 'already_solved') {
+            setStatus('success')
+            setMessage('Challenge already solved!')
+          } else {
+            setStatus('success')
+            setMessage('Correct flag! Well done!')
+            // Add solve to store for immediate UI update
+            addSolve(dojoId, moduleId, challengeId)
+          }
+          setValue('')
+          setTimeout(() => {
+            setShowFeedback(false)
+            setStatus('idle')
+            setMessage('')
+          }, 3000)
+        } else {
+          setStatus('error')
+          setMessage('Incorrect flag. Try again!')
+          setValue('')
+          setTimeout(() => {
+            setShowFeedback(false)
+            setStatus('idle')
+            setMessage('')
+          }, 3000)
+        }
+        setShowFeedback(true)
       }
-    } catch (error) {
+    } catch (error: any) {
       setStatus('error')
-      setMessage('Failed to submit flag. Please try again.')
+
+      let errorMessage = 'Failed to submit flag. Please try again.'
+      if (error?.status === 401 || error?.status === 403) {
+        errorMessage = 'Authentication required. Please log in.'
+      } else if (error?.response?.message) {
+        errorMessage = error.response.message
+      }
+
+      setMessage(errorMessage)
       setShowFeedback(true)
-      setTimeout(() => setShowFeedback(false), 5000)
-    } finally {
-      setIsSubmitting(false)
+      setValue('')
+      setTimeout(() => {
+        setShowFeedback(false)
+        setStatus('idle')
+        setMessage('')
+      }, 3000)
     }
   }
 
-  // Mock flag submission - replace with actual implementation
-  const mockFlagSubmission = async (flag: string): Promise<{ success: boolean; message: string }> => {
-    await new Promise(resolve => setTimeout(resolve, 1000)) // Simulate API call
-
-    // Mock validation
-    if (flag === 'pwn.college{test_flag}') {
-      return { success: true, message: 'Correct flag! +100 points' }
-    } else {
-      return { success: false, message: 'Incorrect flag. Try again!' }
-    }
-  }
 
   // Auto-submit when valid flag pattern is detected
   useEffect(() => {
@@ -105,51 +154,52 @@ export function SmartFlagInput({
 
   const getStatusIcon = () => {
     if (isSubmitting) {
-      return <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+      return <Loader2 className="h-4 w-4 animate-spin text-primary" />
     }
 
     switch (status) {
       case 'success':
-        return <Check className="h-3 w-3 text-green-500" />
+        return <Check className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
       case 'error':
-        return <X className="h-3 w-3 text-red-500" />
+        return <X className="h-4 w-4 text-destructive" />
       default:
         if (isValidFlag) {
-          return <Check className="h-3 w-3 text-green-500" />
+          return <Send className="h-4 w-4 text-primary" />
         }
-        return <Badge variant="outline" className="text-xs font-mono bg-muted/50">↵</Badge>
+        return null
     }
   }
 
-  const getInputClasses = () => {
-    return cn(
-      "h-9 w-64 px-3 py-2 pr-8 text-sm bg-background border rounded-md transition-all duration-200",
-      "focus:outline-none focus:ring-2 focus:ring-offset-2 placeholder:text-muted-foreground",
-      {
-        'border-input focus:ring-ring': status === 'idle',
-        'border-green-500 focus:ring-green-500 bg-green-50/50': status === 'success',
-        'border-red-500 focus:ring-red-500 bg-red-50/50': status === 'error',
-        'border-blue-500 focus:ring-blue-500': isValidFlag && status === 'idle',
-        'animate-pulse': isSubmitting
-      }
-    )
+  const getInputVariant = () => {
+    if (status === 'success') return 'success'
+    if (status === 'error') return 'destructive'
+    if (isValidFlag && status === 'idle') return 'valid'
+    return 'default'
   }
 
   return (
-    <div className="flex items-center gap-2 flex-shrink-0">
-      <Flag className={cn(
-        "h-4 w-4 transition-colors duration-200",
-        {
-          'text-primary': status === 'idle',
-          'text-green-500': status === 'success',
-          'text-red-500': status === 'error',
-          'text-blue-500': isValidFlag && status === 'idle'
-        }
-      )} />
+    <div className="relative">
+      <Popover open={showFeedback && !!message} onOpenChange={setShowFeedback}>
+        <PopoverTrigger asChild>
+          <div className={cn(
+            "relative flex items-center rounded-lg border h-9 px-3 gap-2 transition-all duration-200",
+            {
+              'border-muted-foreground/20 bg-muted/30 hover:bg-muted/50': status === 'idle' && !isValidFlag,
+              'border-primary/50 bg-primary/5 hover:bg-primary/10': isValidFlag && status === 'idle',
+              'border-emerald-500/50 bg-emerald-50/50 dark:bg-emerald-950/30': status === 'success',
+              'border-destructive/50 bg-destructive/5': status === 'error',
+            }
+          )}>
+            <Flag className={cn(
+              "h-4 w-4 flex-shrink-0 transition-colors duration-200",
+              {
+                'text-muted-foreground': status === 'idle' && !isValidFlag,
+                'text-primary': isValidFlag && status === 'idle',
+                'text-emerald-600 dark:text-emerald-400': status === 'success',
+                'text-destructive': status === 'error',
+              }
+            )} />
 
-      <div className="relative">
-        <Popover open={showFeedback && !!message} onOpenChange={setShowFeedback}>
-          <PopoverTrigger asChild>
             <input
               ref={inputRef}
               type="text"
@@ -157,30 +207,44 @@ export function SmartFlagInput({
               value={value}
               onChange={(e) => setValue(e.target.value)}
               onKeyDown={handleKeyDown}
-              className={getInputClasses()}
               disabled={isSubmitting}
-            />
-          </PopoverTrigger>
-          {message && (
-            <PopoverContent
-              side="bottom"
               className={cn(
-                "text-sm font-medium p-2 w-auto",
+                "flex-1 bg-transparent border-0 outline-none text-sm",
+                "placeholder:text-muted-foreground/60",
+                "disabled:opacity-50 disabled:cursor-not-allowed",
                 {
-                  'bg-green-500 text-white border-green-500': status === 'success',
-                  'bg-red-500 text-white border-red-500': status === 'error'
+                  'text-foreground': status === 'idle',
+                  'text-primary font-medium': isValidFlag && status === 'idle',
+                  'text-emerald-700 dark:text-emerald-400 font-medium': status === 'success',
+                  'text-destructive font-medium': status === 'error',
                 }
               )}
-            >
-              {message}
-            </PopoverContent>
-          )}
-        </Popover>
+            />
 
-        <div className="absolute right-2 top-1/2 -translate-y-1/2">
-          {getStatusIcon()}
-        </div>
-      </div>
+            {getStatusIcon() && (
+              <div className="flex-shrink-0">
+                {getStatusIcon()}
+              </div>
+            )}
+          </div>
+        </PopoverTrigger>
+
+        {message && (
+          <PopoverContent
+            side="bottom"
+            align="start"
+            className={cn(
+              "text-sm font-medium p-3 max-w-xs border shadow-lg animate-in fade-in-0 zoom-in-95",
+              {
+                'bg-emerald-50/80 backdrop-blur-sm text-emerald-800 border-emerald-200/50 dark:bg-emerald-950/80 dark:text-emerald-200 dark:border-emerald-800/50': status === 'success',
+                'bg-destructive/5 backdrop-blur-sm text-destructive border-destructive/20': status === 'error'
+              }
+            )}
+          >
+            {message}
+          </PopoverContent>
+        )}
+      </Popover>
     </div>
   )
 }
