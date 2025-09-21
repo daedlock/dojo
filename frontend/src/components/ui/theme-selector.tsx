@@ -9,45 +9,11 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { useTheme } from '@/components/theme/ThemeProvider'
-
-type ThemePalette = 'amethyst' | 'everforest'
-
-interface ThemeOption {
-  value: ThemePalette
-  label: string
-  description: string
-  colors: {
-    primary: string
-    secondary: string
-    accent: string
-  }
-}
-
-const themes: ThemeOption[] = [
-  {
-    value: 'amethyst',
-    label: 'Amethyst',
-    description: 'Purple-toned professional theme',
-    colors: {
-      primary: '#a855f7',
-      secondary: '#c084fc',
-      accent: '#e879f9'
-    }
-  },
-  {
-    value: 'everforest',
-    label: 'Everforest',
-    description: 'Green forest-inspired theme',
-    colors: {
-      primary: '#8da101',  /* green light */
-      secondary: '#a7c080', /* green dark */
-      accent: '#7fbbb3'    /* blue */
-    }
-  }
-]
+import { getAllThemes } from '@/themes'
 
 export function ThemeSelector() {
   const { palette, mode, setPalette, toggleMode } = useTheme()
+  const themes = getAllThemes()
 
   const getModeIcon = () => {
     switch (mode) {
@@ -79,7 +45,7 @@ export function ThemeSelector() {
           <Button variant="ghost" size="sm" className="h-9 gap-2">
             <Palette className="h-4 w-4" />
             <span className="hidden sm:inline">
-              {themes.find(t => t.value === palette)?.label}
+              {themes.find(t => t.id === palette)?.name}
             </span>
             <ChevronDown className="h-3 w-3" />
           </Button>
@@ -87,35 +53,40 @@ export function ThemeSelector() {
         <DropdownMenuContent align="end" className="w-64">
           <DropdownMenuLabel>Choose Theme</DropdownMenuLabel>
           <DropdownMenuSeparator />
-          {themes.map((themeOption) => (
+          {themes.map((theme) => (
             <DropdownMenuItem
-              key={themeOption.value}
-              onClick={() => setPalette(themeOption.value)}
+              key={theme.id}
+              onClick={() => setPalette(theme.id)}
               className="flex items-start gap-3 p-3 cursor-pointer"
             >
               <div className="flex items-center gap-2 flex-1">
                 <div className="flex gap-1">
                   <div
                     className="w-3 h-3 rounded-full border border-border"
-                    style={{ backgroundColor: themeOption.colors.primary }}
+                    style={{ backgroundColor: theme.previewColors.primary }}
                   />
                   <div
                     className="w-3 h-3 rounded-full border border-border"
-                    style={{ backgroundColor: themeOption.colors.secondary }}
+                    style={{ backgroundColor: theme.previewColors.secondary }}
                   />
                   <div
                     className="w-3 h-3 rounded-full border border-border"
-                    style={{ backgroundColor: themeOption.colors.accent }}
+                    style={{ backgroundColor: theme.previewColors.accent }}
                   />
                 </div>
                 <div className="flex-1">
-                  <div className="font-medium">{themeOption.label}</div>
+                  <div className="font-medium">{theme.name}</div>
                   <div className="text-xs text-muted-foreground">
-                    {themeOption.description}
+                    {theme.description}
                   </div>
+                  {theme.author && (
+                    <div className="text-xs text-muted-foreground/70">
+                      by {theme.author}
+                    </div>
+                  )}
                 </div>
               </div>
-              {palette === themeOption.value && (
+              {palette === theme.id && (
                 <Check className="h-4 w-4 text-primary" />
               )}
             </DropdownMenuItem>

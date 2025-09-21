@@ -1,12 +1,10 @@
 import React, { createContext, useContext, useEffect, useState } from 'react'
-
-export type ThemePalette = 'amethyst' | 'everforest'
-export type ThemeMode = 'light' | 'dark' | 'system'
+import { getTheme, getDefaultTheme, themeExists, themeColorsToCSSVars, type ThemeMode } from '@/themes'
 
 interface ThemeContextType {
-  palette: ThemePalette
+  palette: string
   mode: ThemeMode
-  setPalette: (palette: ThemePalette) => void
+  setPalette: (palette: string) => void
   setMode: (mode: ThemeMode) => void
   toggleMode: () => void
 }
@@ -22,9 +20,10 @@ export function ThemeProvider({
   defaultTheme?: ThemeMode
   storageKey?: string
 }) {
-  const [palette, setPalette] = useState<ThemePalette>(() => {
+  const [palette, setPalette] = useState<string>(() => {
     const saved = localStorage.getItem('theme-palette')
-    return (saved as ThemePalette) || 'amethyst'
+    const defaultTheme = getDefaultTheme()
+    return (saved && themeExists(saved)) ? saved : defaultTheme.id
   })
 
   const [mode, setMode] = useState<ThemeMode>(() => {
@@ -53,20 +52,33 @@ export function ThemeProvider({
   useEffect(() => {
     const root = document.documentElement
 
-    // Remove all theme classes
-    root.classList.remove('theme-amethyst', 'theme-everforest', 'light', 'dark')
+    // Clear all existing CSS variables and theme classes
+    root.classList.remove('light', 'dark')
 
-    // Apply palette theme
-    if (palette === 'everforest') {
-      root.classList.add('theme-everforest')
+    // Get the current theme
+    const currentTheme = getTheme(palette)
+    if (!currentTheme) {
+      console.warn(`Theme "${palette}" not found, falling back to default`)
+      setPalette(getDefaultTheme().id)
+      return
     }
 
-    // Apply mode
+    // Determine the resolved mode
     let resolvedMode = mode
     if (mode === 'system') {
       resolvedMode = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
     }
 
+    // Get the appropriate colors for the resolved mode
+    const colors = resolvedMode === 'dark' ? currentTheme.dark : currentTheme.light
+
+    // Apply CSS variables
+    const cssVars = themeColorsToCSSVars(colors)
+    Object.entries(cssVars).forEach(([property, value]) => {
+      root.style.setProperty(property, value)
+    })
+
+    // Add mode class for any remaining theme-specific styles
     if (resolvedMode === 'dark') {
       root.classList.add('dark')
     }

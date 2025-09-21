@@ -128,7 +128,7 @@ export default function DojoDetail() {
       exit={{ opacity: 0, y: -20 }}
       transition={{ duration: 0.2, ease: [0.25, 0.46, 0.45, 0.94] }}
     >
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="flex items-center gap-4 mb-8">
           <Button variant="ghost" size="sm" onClick={() => navigate('/')}>
