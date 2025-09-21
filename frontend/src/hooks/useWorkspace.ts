@@ -11,6 +11,7 @@ export function useWorkspace(
     password?: string
     service?: string
     challenge?: string
+    theme?: string
   } = {},
   enabled = true
 ) {

@@ -25,11 +25,13 @@ class WorkspaceService {
     user?: string
     password?: string
     service?: string
+    theme?: string
   }): Promise<WorkspaceResponse> {
     const searchParams = new URLSearchParams()
     if (params.user) searchParams.append('user', params.user)
     if (params.password) searchParams.append('password', params.password)
     if (params.service) searchParams.append('service', params.service)
+    if (params.theme) searchParams.append('theme', params.theme)
 
     const query = searchParams.toString()
     return dojoApiClient.get<WorkspaceResponse>(`/workspace${query ? '?' + query : ''}`)

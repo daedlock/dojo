@@ -10,6 +10,7 @@ import { WorkspaceSidebar } from '@/components/workspace/WorkspaceSidebar'
 import { WorkspaceHeader } from '@/components/workspace/WorkspaceHeader'
 import { WorkspaceContent } from '@/components/workspace/WorkspaceContent'
 import type { Dojo, DojoModule } from '@/types/api'
+import { useTheme } from '@/components/theme/ThemeProvider'
 
 interface DojoWorkspaceLayoutProps {
   dojo: Dojo
@@ -48,6 +49,10 @@ export function DojoWorkspaceLayout({
 
   const [isResizing, setIsResizing] = useState(false)
   const startChallengeMutation = useStartChallenge()
+  const { palette } = useTheme()
+
+  // Pass just the theme name for terminal
+  const terminalTheme = activeService === 'terminal' ? palette : undefined
 
   // Single workspace call that gets status and data in one request
   // Only enable when we have an active challenge AND it's not currently starting
@@ -55,7 +60,8 @@ export function DojoWorkspaceLayout({
   const { data: workspaceData } = useWorkspace(
     {
       service: activeService,
-      challenge: `${activeChallenge.dojoId}-${activeChallenge.moduleId}-${activeChallenge.challengeId}`
+      challenge: `${activeChallenge.dojoId}-${activeChallenge.moduleId}-${activeChallenge.challengeId}`,
+      theme: terminalTheme
     },
     !!activeChallenge
   )
