@@ -16,8 +16,9 @@ export default function WorkspacePage() {
   // Basic state access without complex selectors
   const dojos = useDojoStore(state => state.dojos)
   const modulesMap = useDojoStore(state => state.modules)
-  const isLoading = useDojoStore(state => state.loadingDojos || state.loadingModules[dojoId || ''])
-  const error = useDojoStore(state => state.dojoError || state.moduleError[dojoId || ''])
+  const solvesMap = useDojoStore(state => state.solves)
+  const isLoading = useDojoStore(state => state.loadingDojos || state.loadingModules[dojoId || ''] || state.loadingSolves[`${dojoId}-all`])
+  const error = useDojoStore(state => state.dojoError || state.moduleError[dojoId || ''] || state.solveError[`${dojoId}-all`])
 
   // Set active challenge in UI store - MUST be before any conditional returns
   const setActiveChallenge = useUIStore(state => state.setActiveChallenge)
@@ -25,12 +26,32 @@ export default function WorkspacePage() {
   // Simple data lookup
   const dojo = dojos.find(d => d.id === dojoId)
   const modules = modulesMap[dojoId || ''] || []
+  const solves = solvesMap[`${dojoId}-all`] || []
+
+  // Get solved challenge IDs
+  const solvedChallengeIds = new Set(
+    solves
+      ?.filter(solve => solve.module_id === moduleId)
+      .map(solve => solve.challenge_id) || []
+  )
+
+
+  // Enrich module with solved status
   const module = modules.find(m => m.id === moduleId)
-  const challenge = module?.challenges?.find(c => c.id === challengeId)
+  const enrichedModule = module ? {
+    ...module,
+    challenges: module.challenges.map(challenge => ({
+      ...challenge,
+      solved: solvedChallengeIds.has(challenge.id)
+    }))
+  } : undefined
+
+  const challenge = enrichedModule?.challenges?.find(c => c.id === challengeId)
 
   useEffect(() => {
     if (dojoId) {
       useDojoStore.getState().fetchModules(dojoId)
+      useDojoStore.getState().fetchSolves(dojoId)
     }
   }, [dojoId])
 
@@ -47,20 +68,20 @@ export default function WorkspacePage() {
   }, [location.pathname])
 
   useEffect(() => {
-    if (dojo && module && challenge) {
+    if (dojo && enrichedModule && challenge) {
       const challengeData = {
         dojoId: dojo.id,
-        moduleId: module.id,
+        moduleId: enrichedModule.id,
         challengeId: challenge.id,
         challengeName: challenge.name,
         dojoName: dojo.name,
-        moduleName: module.name
+        moduleName: enrichedModule.name
       }
       console.log('Setting active challenge:', challengeData)
       setActiveChallenge(challengeData)
     }
     // Don't clear on cleanup - let the widget persist until user terminates
-  }, [dojo, module, challenge, setActiveChallenge])
+  }, [dojo, enrichedModule, challenge, setActiveChallenge])
 
   if (isLoading) {
     return (
@@ -88,7 +109,7 @@ export default function WorkspacePage() {
     )
   }
 
-  if (!module || !challenge) {
+  if (!enrichedModule || !challenge) {
     return (
       <div className="min-h-screen bg-background text-foreground p-6 flex items-center justify-center">
         <div className="text-center">
@@ -122,7 +143,7 @@ export default function WorkspacePage() {
       >
         <DojoWorkspaceLayout
           dojo={dojo!}
-          modules={[module]}
+          modules={[enrichedModule]}
           activeChallenge={{
             dojoId: dojoId!,
             moduleId: moduleId!,

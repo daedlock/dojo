@@ -1,6 +1,6 @@
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Play } from 'lucide-react'
+import { Play, X } from 'lucide-react'
 import { Markdown } from '@/components/ui/markdown'
 
 interface Challenge {
@@ -18,18 +18,32 @@ interface ChallengePopoverContentProps {
   isActive: boolean
   onStartChallenge: () => void
   isPending: boolean
+  onClose?: () => void
 }
 
 export function ChallengePopoverContent({
   challenge,
   isActive,
   onStartChallenge,
-  isPending
+  isPending,
+  onClose
 }: ChallengePopoverContentProps) {
   return (
     <div className="flex flex-col" style={{ maxHeight: '70vh' }}>
       <div className="p-4 border-b flex-shrink-0">
-        <h4 className="font-semibold">{challenge.name}</h4>
+        <div className="flex items-start justify-between">
+          <h4 className="font-semibold">{challenge.name}</h4>
+          {onClose && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 w-6 p-0 -mt-1 -mr-1"
+              onClick={onClose}
+            >
+              <X className="h-3 w-3" />
+            </Button>
+          )}
+        </div>
         <div className="flex flex-wrap gap-2 mt-1">
           {challenge.required && (
             <Badge variant="secondary" className="text-xs">
@@ -47,7 +61,7 @@ export function ChallengePopoverContent({
             </Badge>
           )}
           {challenge.solved && (
-            <Badge variant="default" className="text-xs bg-green-500">
+            <Badge variant="default" className="text-xs bg-primary">
               Solved
             </Badge>
           )}

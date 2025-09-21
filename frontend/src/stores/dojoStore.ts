@@ -59,7 +59,7 @@ interface DojoStore {
   fetchDojos: () => Promise<void>
   fetchModules: (dojoId: string) => Promise<void>
   fetchSolves: (dojoId: string, username?: string) => Promise<void>
-  startChallenge: (dojoId: string, moduleId: string, challengeId: string, practice?: boolean) => Promise<void>
+  addSolve: (dojoId: string, moduleId: string, challengeId: string, userId?: string) => void
 
   // Selectors
   getDojoById: (dojoId: string) => Dojo | undefined
@@ -170,15 +170,39 @@ export const useDojoStore = create<DojoStore>()(
       }
     },
 
-    startChallenge: async (dojoId: string, moduleId: string, challengeId: string, practice = false) => {
-      try {
-        // Implementation would call the actual API
-        console.log('Starting challenge:', { dojoId, moduleId, challengeId, practice })
-      } catch (error) {
-        console.error('Failed to start challenge:', error)
-        throw error
+    addSolve: (dojoId: string, moduleId: string, challengeId: string, userId?: string) => {
+      const key = `${dojoId}-${userId || 'all'}`
+      const newSolve: Solve = {
+        user_id: userId || 'current-user',
+        dojo_id: dojoId,
+        module_id: moduleId,
+        challenge_id: challengeId,
+        timestamp: new Date().toISOString()
       }
+
+      set(state => {
+        const existingSolves = state.solves[key] || []
+        // Check if solve already exists to avoid duplicates
+        const alreadyExists = existingSolves.some(solve =>
+          solve.module_id === moduleId && solve.challenge_id === challengeId
+        )
+
+        if (alreadyExists) {
+          return state // No change if already solved
+        }
+
+        return {
+          solves: {
+            ...state.solves,
+            [key]: [...existingSolves, newSolve]
+          }
+        }
+      })
+
+      // Clear stats cache when solves change
+      selectorCache.delete(`stats-${dojoId}`)
     },
+
 
     // Selectors
     getDojoById: (dojoId: string) => {

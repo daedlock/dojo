@@ -138,12 +138,14 @@ export default function ModuleDetail() {
     )
   }
 
-  // Get solved challenge IDs for this dojo/module
+  // Get solved challenge IDs for this module
+  // Note: solves are already filtered by dojo when fetched, so we only need to filter by module
   const solvedChallengeIds = new Set(
     solves
-      ?.filter(solve => solve.dojo_id === dojoId && solve.module_id === moduleId)
+      ?.filter(solve => solve.module_id === moduleId)
       .map(solve => solve.challenge_id) || []
   )
+
 
   const completedChallenges = module.challenges.filter(
     challenge => solvedChallengeIds.has(challenge.id)
@@ -211,7 +213,7 @@ export default function ModuleDetail() {
                     className={cn(
                       "hover:border-primary/50 transition-all duration-200 relative",
                       isOpen && "border-primary/30",
-                      status === 'solved' && "border-green-600/20 bg-green-600/5",
+                      status === 'solved' && "border-primary/50 bg-primary/10",
                       status === 'in-progress' && "border-amber-600/20 bg-amber-600/5"
                     )}
                   >
@@ -262,7 +264,7 @@ export default function ModuleDetail() {
                                 }}
                               >
                                 {status === 'solved' ? (
-                                  <CheckCircle className="h-4 w-4 text-green-600" />
+                                  <CheckCircle className="h-4 w-4 text-primary" />
                                 ) : status === 'in-progress' ? (
                                   <Clock className="h-4 w-4 text-amber-600" />
                                 ) : (
@@ -271,11 +273,11 @@ export default function ModuleDetail() {
                               </motion.div>
                               <CardTitle className="text-lg group-hover:text-primary transition-colors">{challenge.name}</CardTitle>
                               <div className="flex items-center gap-2 ml-2">
-                                {challenge.required && (
-                                  <Badge variant="secondary" className="text-xs">Required</Badge>
+                                {!challenge.required && (
+                                  <Badge variant="secondary" className="text-xs">Optional</Badge>
                                 )}
                                 {status === 'solved' && (
-                                  <Badge variant="default" className="text-xs bg-green-600/10 text-green-700 border-green-600/20">
+                                  <Badge variant="default" className="text-xs bg-primary/10 text-primary border-primary/20">
                                     Solved
                                   </Badge>
                                 )}

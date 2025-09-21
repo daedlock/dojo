@@ -38,6 +38,8 @@ export interface DojoSolvesResponse {
     timestamp: string
     module_id: string
     challenge_id: string
+    user_id?: string
+    dojo_id?: string
   }>
 }
 

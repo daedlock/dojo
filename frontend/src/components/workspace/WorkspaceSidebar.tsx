@@ -87,7 +87,7 @@ export function WorkspaceSidebar({
       )}
 
       {/* Header */}
-      <div className="border-b p-4 animate-in fade-in slide-in-from-top-2 duration-300 delay-100">
+      <div className="border-b p-4  py-[18px] animate-in fade-in slide-in-from-top-2 duration-300 delay-100">
         <div className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'}`}>
           {!sidebarCollapsed ? (
             <div className="flex-1 min-w-0">
@@ -97,6 +97,7 @@ export function WorkspaceSidebar({
           ) : null}
 
           <div className={`flex items-center gap-1 ${sidebarCollapsed ? 'flex-col' : 'flex-shrink-0'}`}>
+            {!sidebarCollapsed &&
             <Button
               variant="ghost"
               size="sm"
@@ -105,6 +106,7 @@ export function WorkspaceSidebar({
             >
               {headerHidden ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             </Button>
+            }
 
             <Button
               variant="ghost"
@@ -140,28 +142,28 @@ export function WorkspaceSidebar({
                 <div
                   key={challenge.id}
                   className={cn(
-                    "flex items-center justify-between gap-2 p-2.5 rounded-md text-sm transition-all",
+                    "group flex items-center justify-between gap-2 p-2.5 rounded-md text-sm transition-all",
                     isActive
-                      ? "bg-primary text-primary-foreground shadow-sm"
+                      ? "bg-primary/10 text-sm border-primary"
                       : "hover:bg-muted/70 cursor-pointer"
                   )}
                   onClick={() => !isActive && onChallengeStart(module.id, challenge.id)}
                 >
                   <div className="flex items-center gap-2.5 min-w-0">
                     {challenge.solved ? (
-                      <CheckCircle className="h-4 w-4 flex-shrink-0" />
+                      <CheckCircle className="h-4 w-4 flex-shrink-0 text-primary" />
                     ) : (
                       <Circle className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
                     )}
                     <span className="truncate font-medium">{challenge.name}</span>
                   </div>
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     <Popover>
                       <PopoverTrigger asChild>
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="h-6 w-6 p-0"
+                          className="h-6 w-6 p-0 hover:bg-primary/10 hover:text-primary"
                           onClick={(e) => e.stopPropagation()}
                         >
                           <Info className="h-3 w-3" />
@@ -181,7 +183,7 @@ export function WorkspaceSidebar({
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="h-6 w-6 p-0"
+                        className="h-6 w-6 p-0 hover:bg-primary/10 hover:text-primary"
                         onClick={(e) => {
                           e.stopPropagation()
                           onChallengeStart(module.id, challenge.id)
@@ -210,17 +212,15 @@ export function WorkspaceSidebar({
                   <PopoverTrigger asChild>
                     <div
                       className={cn(
-                        "w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium transition-colors cursor-pointer border-2",
+                        "w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium transition-all cursor-pointer",
                         isActive
-                          ? "bg-primary text-primary-foreground border-primary"
-                          : challenge.solved
-                            ? "bg-green-500 text-white border-green-500"
-                            : "bg-background text-muted-foreground border-border hover:border-primary hover:text-foreground"
+                          ? "bg-primary text-primary-foreground shadow-sm"
+                          : "hover:bg-muted/70"
                       )}
                       title={`${challengeNumber}. ${challenge.name}`}
                     >
                       {challenge.solved ? (
-                        <CheckCircle className="h-4 w-4" />
+                        <CheckCircle className="h-4 w-4 text-primary" />
                       ) : (
                         challengeNumber
                       )}

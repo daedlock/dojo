@@ -7,6 +7,7 @@ import { Markdown } from '@/components/ui/markdown'
 import { Loader2, AlertCircle, Star, Users, Trophy, BookOpen, Zap } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { useMemo } from 'react'
+import ninjaImage from '@/assets/ninja.png'
 
 export default function DojoList() {
   const dojos = useDojoStore(state => state.dojos)
@@ -221,16 +222,33 @@ export default function DojoList() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Hero Section */}
         <div className="py-16 sm:py-20 lg:py-24">
-          <div className="max-w-4xl">
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold mb-6 bg-gradient-to-r from-foreground to-muted-foreground bg-clip-text text-transparent">
-              Security Dojos
-            </h1>
-            <p className="text-muted-foreground text-lg sm:text-xl lg:text-2xl leading-relaxed mb-8 max-w-3xl">
-              The material is split into a number of "dojos", with each dojo typically covering a high-level topic.
-              The material is designed to be tackled in order.
-            </p>
-            <div className="text-sm sm:text-base text-muted-foreground">
-              {dojos.length} {dojos.length === 1 ? 'dojo' : 'dojos'} available
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            <div className="max-w-4xl">
+              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold mb-6 bg-gradient-to-r from-foreground to-muted-foreground bg-clip-text text-transparent">
+                Security Dojos
+              </h1>
+              <p className="text-muted-foreground text-lg sm:text-xl lg:text-2xl leading-relaxed mb-8 max-w-3xl">
+                The material is split into a number of "dojos", with each dojo typically covering a high-level topic.
+                The material is designed to be tackled in order.
+              </p>
+              <div className="text-sm sm:text-base text-muted-foreground">
+                {dojos.length} {dojos.length === 1 ? 'dojo' : 'dojos'} available
+              </div>
+            </div>
+            <div className="flex justify-center lg:justify-end">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] }}
+                className="relative"
+              >
+                <img
+                  src={ninjaImage}
+                  alt="Security Ninja"
+                  className="w-[400px] h-[400px] sm:w-80 sm:h-80 lg:w-[600px] lg:h-[600px] drop-shadow-2xl"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-primary/20 to-transparent rounded-full blur-3xl -z-10" />
+              </motion.div>
             </div>
           </div>
         </div>
