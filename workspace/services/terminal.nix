@@ -19,6 +19,7 @@ let
 if status is-interactive
     # Commands to run in interactive sessions can go here
     set fish_greeting
+    neofetch
 end
 
 
@@ -46,7 +47,6 @@ end
 # Bind Ctrl+O to the o function
 bind \co 'o; commandline -f repaint'
 
-neofetch
 EOF
 
     # Use our config if user doesn't have one
