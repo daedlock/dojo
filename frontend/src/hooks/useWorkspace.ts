@@ -1,17 +1,22 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { workspaceService } from '@/services/workspace'
 import { queryKeys } from '@/lib/queryClient'
+import { useUIStore } from '@/stores'
+import { useEffect } from 'react'
 
 // Get workspace iframe URL
 export function useWorkspace(
   params: {
     user?: string
-    password?: string  
+    password?: string
     service?: string
+    challenge?: string
   } = {},
   enabled = true
 ) {
-  return useQuery({
+  const fetchActiveChallenge = useUIStore(state => state.fetchActiveChallenge)
+
+  const query = useQuery({
     queryKey: queryKeys.workspace(params),
     queryFn: () => workspaceService.getWorkspace(params),
     enabled,
@@ -25,6 +30,15 @@ export function useWorkspace(
       return false
     },
   })
+
+  // Automatically update active challenge state when workspace data changes
+  useEffect(() => {
+    if (query.data) {
+      fetchActiveChallenge()
+    }
+  }, [query.data, fetchActiveChallenge])
+
+  return query
 }
 
 // Reset home directory

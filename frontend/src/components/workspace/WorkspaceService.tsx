@@ -19,14 +19,20 @@ export function WorkspaceService({ iframeSrc, activeService, onReady }: Workspac
   const checkInterval = 1000 // Check every second
 
   useEffect(() => {
+    // Construct full URL
+    const baseUrl = import.meta.env.VITE_DOJO_BASE_URL || window.location.origin
+    const fullUrl = iframeSrc.startsWith('/') ? `${baseUrl}${iframeSrc}` : iframeSrc
+
+    // Check if iframe already has the correct URL - if so, don't reload
+    if (iframeRef.current && iframeRef.current.src === fullUrl && isReady) {
+      console.log(`${activeService} iframe already loaded with correct URL, skipping reload`)
+      return
+    }
+
     setIsLoading(true)
     setError(null)
     setIsReady(false)
     retryCount.current = 0
-
-    // Construct full URL
-    const baseUrl = import.meta.env.VITE_DOJO_BASE_URL || window.location.origin
-    const fullUrl = iframeSrc.startsWith('/') ? `${baseUrl}${iframeSrc}` : iframeSrc
 
     // Check if service is actually ready by making a HEAD request
     const checkServiceReady = async () => {
