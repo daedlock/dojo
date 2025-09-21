@@ -15,6 +15,11 @@ export interface WorkspaceResponse {
 }
 
 class WorkspaceService {
+  // Get current active challenge (without starting workspace)
+  async getCurrentChallenge(): Promise<WorkspaceResponse> {
+    return dojoApiClient.get<WorkspaceResponse>('/workspace')
+  }
+
   // Get workspace iframe URL for a service
   async getWorkspace(params: {
     user?: string
@@ -33,6 +38,11 @@ class WorkspaceService {
   // Reset user's home directory
   async resetHome(): Promise<{ success: boolean; error?: string; message?: string }> {
     return dojoApiClient.post('/workspace/reset_home')
+  }
+
+  // Terminate/kill the current workspace
+  async terminateWorkspace(): Promise<{ success: boolean; error?: string; message?: string }> {
+    return dojoApiClient.post('/workspace/terminate')
   }
 }
 

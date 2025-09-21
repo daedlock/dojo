@@ -11,21 +11,20 @@ export default function WorkspacePage() {
   const navigate = useNavigate()
   const [isExiting, setIsExiting] = useState(false)
 
-  // Direct state access to avoid selector issues
+  // Basic state access without complex selectors
   const dojos = useDojoStore(state => state.dojos)
   const modulesMap = useDojoStore(state => state.modules)
-  const loadingDojos = useDojoStore(state => state.loadingDojos)
-  const loadingModules = useDojoStore(state => state.loadingModules)
-  const dojoError = useDojoStore(state => state.dojoError)
-  const moduleError = useDojoStore(state => state.moduleError)
+  const isLoading = useDojoStore(state => state.loadingDojos || state.loadingModules[dojoId || ''])
+  const error = useDojoStore(state => state.dojoError || state.moduleError[dojoId || ''])
 
-  // Find data directly
+  // Set active challenge in UI store - MUST be before any conditional returns
+  const setActiveChallenge = useUIStore(state => state.setActiveChallenge)
+
+  // Simple data lookup
   const dojo = dojos.find(d => d.id === dojoId)
   const modules = modulesMap[dojoId || ''] || []
-
-  // Loading and error states
-  const isLoading = loadingDojos || loadingModules[dojoId || '']
-  const error = dojoError || moduleError[dojoId || '']
+  const module = modules.find(m => m.id === moduleId)
+  const challenge = module?.challenges?.find(c => c.id === challengeId)
 
   useEffect(() => {
     if (dojoId) {
@@ -33,13 +32,21 @@ export default function WorkspacePage() {
     }
   }, [dojoId])
 
-  // Cleanup effect to restore header state when leaving workspace
   useEffect(() => {
-    return () => {
-      // Reset header state when component unmounts
-      useUIStore.getState().setHeaderHidden(false)
+    if (dojo && module && challenge) {
+      const challengeData = {
+        dojoId: dojo.id,
+        moduleId: module.id,
+        challengeId: challenge.id,
+        challengeName: challenge.name,
+        dojoName: dojo.name,
+        moduleName: module.name
+      }
+      console.log('Setting active challenge:', challengeData)
+      setActiveChallenge(challengeData)
     }
-  }, [])
+    // Don't clear on cleanup - let the widget persist until user terminates
+  }, [dojo, module, challenge, setActiveChallenge])
 
   if (isLoading) {
     return (
@@ -67,10 +74,6 @@ export default function WorkspacePage() {
     )
   }
 
-  // Find the specific challenge
-  const module = modules.find(m => m.id === moduleId)
-  const challenge = module?.challenges?.find(c => c.id === challengeId)
-
   if (!module || !challenge) {
     return (
       <div className="min-h-screen bg-background text-foreground p-6 flex items-center justify-center">
@@ -84,36 +87,6 @@ export default function WorkspacePage() {
         </div>
       </div>
     )
-  }
-
-  // Transform ONLY the current module for the layout component
-  const layoutModules = [{
-    id: module.id,
-    name: module.name,
-    description: module.description,
-    challenges: (module.challenges || []).map(challenge => ({
-      id: challenge.id,
-      name: challenge.name,
-      solved: false, // TODO: Get solved status
-      required: challenge.required || false,
-      description: challenge.description
-    }))
-  }]
-
-  const handleChallengeStart = (dojoId: string, moduleId: string, challengeId: string) => {
-    // Navigate to the new challenge workspace
-    navigate(`/dojo/${dojoId}/module/${moduleId}/challenge/${challengeId}`)
-  }
-
-  const handleChallengeClose = () => {
-    // Restore header state before exiting
-    useUIStore.getState().setHeaderHidden(false)
-
-    // Start exit animation, then navigate
-    setIsExiting(true)
-    setTimeout(() => {
-      navigate(`/dojo/${dojoId}/module/${moduleId}`)
-    }, 200) // Duration should match the exit animation
   }
 
   return (
@@ -134,20 +107,24 @@ export default function WorkspacePage() {
         className="h-screen w-full"
       >
         <DojoWorkspaceLayout
-          dojo={{
-            id: dojoId!,
-            name: dojo?.name || dojoId!,
-            description: dojo?.description
-          }}
-          modules={layoutModules}
+          dojo={dojo!}
+          modules={[module]}
           activeChallenge={{
             dojoId: dojoId!,
             moduleId: moduleId!,
             challengeId: challengeId!,
             name: challenge.name
           }}
-          onChallengeStart={handleChallengeStart}
-          onChallengeClose={handleChallengeClose}
+          onChallengeStart={(dojoId, moduleId, challengeId) => {
+            navigate(`/dojo/${dojoId}/module/${moduleId}/challenge/${challengeId}`)
+          }}
+          onChallengeClose={() => {
+            // Start exit animation, then navigate
+            setIsExiting(true)
+            setTimeout(() => {
+              navigate(`/dojo/${dojoId}/module/${moduleId}`)
+            }, 200) // Duration should match the exit animation
+          }}
         />
       </motion.div>
     </AnimatePresence>

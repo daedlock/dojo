@@ -1,9 +1,9 @@
 import { Link, useParams } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
+import { StartChallengeButton } from '@/components/ui/start-challenge-button'
 import { Markdown } from '@/components/ui/markdown'
-import { useDojoModules, useDojoSolves, useChallengeDescription, useStartChallenge } from '@/hooks/useDojo'
+import { useDojoModules, useDojoSolves, useChallengeDescription } from '@/hooks/useDojo'
 import { useWorkspace } from '@/hooks/useWorkspace'
 import { ArrowLeft, CheckCircle, Circle, Play, Terminal, Flag, Loader2, AlertCircle, Code, Monitor, AlertTriangle } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -35,7 +35,6 @@ export default function ChallengeDetail() {
     !!dojoId && !!moduleId && !!challengeId
   )
 
-  const startChallengeMutation = useStartChallenge()
 
   // Workspace queries
   const {
@@ -54,24 +53,6 @@ export default function ChallengeDetail() {
     workspaceStatus.current_challenge.challenge_id !== challengeId
   )
 
-  const handleStartChallenge = async () => {
-    if (!dojoId || !moduleId || !challengeId) return
-
-    setStartError(null)
-
-    try {
-      await startChallengeMutation.mutateAsync({
-        dojoId,
-        moduleId,
-        challengeId,
-        practice: false
-      })
-      setChallengeStarted(true)
-    } catch (error: any) {
-      console.error('Failed to start challenge:', error)
-      setStartError(error?.response?.data?.error || error?.message || 'Failed to start challenge')
-    }
-  }
 
   if (!dojoId || !moduleId || !challengeId) {
     return (
@@ -332,24 +313,16 @@ export default function ChallengeDetail() {
                   </Alert>
                 )}
 
-                <Button
+                <StartChallengeButton
+                  dojoId={dojoId}
+                  moduleId={moduleId}
+                  challengeId={challengeId}
                   className="w-full"
                   size="lg"
-                  onClick={handleStartChallenge}
-                  disabled={startChallengeMutation.isPending}
+                  onClick={() => setChallengeStarted(true)}
                 >
-                  {startChallengeMutation.isPending ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Starting...
-                    </>
-                  ) : (
-                    <>
-                      <Play className="h-4 w-4 mr-2" />
-                      Start Challenge
-                    </>
-                  )}
-                </Button>
+                  Start Challenge
+                </StartChallengeButton>
                 {/* Workspace Service Buttons */}
                 {challengeStarted && workspaceStatus?.active && !isWorkspaceChallengeMismatch && (
                   <div className="space-y-2">

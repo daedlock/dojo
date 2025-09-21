@@ -3,7 +3,6 @@ import { create } from 'zustand'
 interface UIStore {
   // Header state
   isHeaderHidden: boolean
-  headerScrolled: boolean
 
   // Workspace state
   workspaceState: {
@@ -12,26 +11,22 @@ interface UIStore {
     isFullScreen: boolean
     activeService: string
     commandPaletteOpen: boolean
+    workspaceHeaderHidden: boolean
   }
 
-  // Modal state
-  modals: {
-    loginOpen: boolean
-    registerOpen: boolean
-    profileOpen: boolean
-  }
-
-  // Notifications
-  notifications: Array<{
-    id: string
-    type: 'success' | 'error' | 'warning' | 'info'
-    message: string
-    duration?: number
-  }>
+  // Active challenge state
+  activeChallenge: {
+    dojoId: string
+    moduleId: string
+    challengeId: string
+    challengeName: string
+    dojoName: string
+    moduleName: string
+    isStarting?: boolean // Track if challenge is currently being started
+  } | null
 
   // Actions - Header
   setHeaderHidden: (hidden: boolean) => void
-  setHeaderScrolled: (scrolled: boolean) => void
 
   // Actions - Workspace
   setSidebarCollapsed: (collapsed: boolean) => void
@@ -39,44 +34,30 @@ interface UIStore {
   setFullScreen: (fullScreen: boolean) => void
   setActiveService: (service: string) => void
   setCommandPaletteOpen: (open: boolean) => void
+  setWorkspaceHeaderHidden: (hidden: boolean) => void
 
-  // Actions - Modals
-  openModal: (modal: keyof UIStore['modals']) => void
-  closeModal: (modal: keyof UIStore['modals']) => void
-  closeAllModals: () => void
-
-  // Actions - Notifications
-  addNotification: (notification: Omit<UIStore['notifications'][0], 'id'>) => void
-  removeNotification: (id: string) => void
-  clearNotifications: () => void
-
-  // Reset functions
-  resetWorkspaceState: () => void
+  // Actions - Active Challenge
+  setActiveChallenge: (challenge: UIStore['activeChallenge']) => void
+  fetchActiveChallenge: () => Promise<void>
 }
 
 const defaultWorkspaceState = {
   sidebarCollapsed: false,
-  sidebarWidth: 320,
+  sidebarWidth: 300,
   isFullScreen: false,
-  activeService: 'terminal',
-  commandPaletteOpen: false
+  activeService: 'code',
+  commandPaletteOpen: false,
+  workspaceHeaderHidden: false
 }
 
-export const useUIStore = create<UIStore>((set, get) => ({
+export const useUIStore = create<UIStore>((set) => ({
   // Initial state
   isHeaderHidden: false,
-  headerScrolled: false,
   workspaceState: defaultWorkspaceState,
-  modals: {
-    loginOpen: false,
-    registerOpen: false,
-    profileOpen: false
-  },
-  notifications: [],
+  activeChallenge: null,
 
   // Header actions
   setHeaderHidden: (hidden) => set({ isHeaderHidden: hidden }),
-  setHeaderScrolled: (scrolled) => set({ headerScrolled: scrolled }),
 
   // Workspace actions
   setSidebarCollapsed: (collapsed) =>
@@ -104,82 +85,83 @@ export const useUIStore = create<UIStore>((set, get) => ({
       workspaceState: { ...state.workspaceState, commandPaletteOpen: open }
     })),
 
-  // Modal actions
-  openModal: (modal) =>
+  setWorkspaceHeaderHidden: (hidden) =>
     set(state => ({
-      modals: { ...state.modals, [modal]: true }
+      workspaceState: { ...state.workspaceState, workspaceHeaderHidden: hidden }
     })),
 
-  closeModal: (modal) =>
-    set(state => ({
-      modals: { ...state.modals, [modal]: false }
-    })),
+  // Active Challenge actions
+  setActiveChallenge: (challenge) => set({ activeChallenge: challenge }),
 
-  closeAllModals: () =>
-    set({
-      modals: {
-        loginOpen: false,
-        registerOpen: false,
-        profileOpen: false
+  fetchActiveChallenge: async () => {
+    console.log('fetchActiveChallenge called (assuming workspace data already fetched)')
+    try {
+      const { workspaceService } = await import('@/services/workspace')
+      const response = await workspaceService.getCurrentChallenge()
+      console.log('Workspace API response:', response)
+
+      if (response.current_challenge) {
+        const challenge = response.current_challenge
+        console.log('Active challenge found:', challenge)
+
+        // Get the dojo and module stores (should already have data)
+        const { useDojoStore } = await import('./dojoStore')
+        const dojos = useDojoStore.getState().dojos
+        const modulesMap = useDojoStore.getState().modules
+
+        // Simple lookup: find dojo by ID
+        const dojo = dojos.find(d => d.id === challenge.dojo_id)
+
+        // Get modules for this dojo
+        const modules = modulesMap[challenge.dojo_id] || []
+
+        // Find module by ID
+        const module = modules.find(m => m.id === challenge.module_id)
+
+        // Find challenge by ID
+        const challengeObj = module?.challenges?.find(c => c.id === challenge.challenge_id)
+
+        console.log('Resolved names:', {
+          dojoName: dojo?.name,
+          moduleName: module?.name,
+          challengeName: challengeObj?.name
+        })
+
+        set({
+          activeChallenge: {
+            dojoId: challenge.dojo_id,
+            moduleId: challenge.module_id,
+            challengeId: challenge.challenge_id,
+            challengeName: challengeObj?.name || challenge.challenge_name,
+            dojoName: dojo?.name || challenge.dojo_id,
+            moduleName: module?.name || challenge.module_id
+          }
+        })
+        console.log('Active challenge set with name:', challengeObj?.name || challenge.challenge_name)
+      } else {
+        // No active challenge
+        console.log('No active challenge found')
+        set({ activeChallenge: null })
       }
-    }),
-
-  // Notification actions
-  addNotification: (notification) => {
-    const id = Date.now().toString() + Math.random().toString(36).substr(2, 9)
-    const newNotification = { ...notification, id }
-
-    set(state => ({
-      notifications: [...state.notifications, newNotification]
-    }))
-
-    // Auto-remove notification after duration
-    const duration = notification.duration || 5000
-    setTimeout(() => {
-      get().removeNotification(id)
-    }, duration)
-  },
-
-  removeNotification: (id) =>
-    set(state => ({
-      notifications: state.notifications.filter(n => n.id !== id)
-    })),
-
-  clearNotifications: () => set({ notifications: [] }),
-
-  // Reset functions
-  resetWorkspaceState: () =>
-    set({ workspaceState: defaultWorkspaceState })
+    } catch (error) {
+      console.error('Failed to fetch active challenge:', error)
+      // Don't clear on error, keep current state
+    }
+  }
 }))
 
 // Selectors for common use cases
 export const useHeaderState = () => {
   const isHeaderHidden = useUIStore(state => state.isHeaderHidden)
-  const headerScrolled = useUIStore(state => state.headerScrolled)
   const setHeaderHidden = useUIStore(state => state.setHeaderHidden)
-  const setHeaderScrolled = useUIStore(state => state.setHeaderScrolled)
 
   return {
     isHeaderHidden,
-    headerScrolled,
-    setHeaderHidden,
-    setHeaderScrolled
+    setHeaderHidden
   }
 }
 
-export const useWorkspaceState = () => useUIStore(state => ({
-  ...state.workspaceState,
-  setSidebarCollapsed: state.setSidebarCollapsed,
-  setSidebarWidth: state.setSidebarWidth,
-  setFullScreen: state.setFullScreen,
-  setActiveService: state.setActiveService,
-  setCommandPaletteOpen: state.setCommandPaletteOpen,
-  resetWorkspaceState: state.resetWorkspaceState
-}))
-
-export const useNotifications = () => useUIStore(state => ({
-  notifications: state.notifications,
-  addNotification: state.addNotification,
-  removeNotification: state.removeNotification,
-  clearNotifications: state.clearNotifications
+export const useActiveChallenge = () => useUIStore(state => ({
+  activeChallenge: state.activeChallenge,
+  setActiveChallenge: state.setActiveChallenge
 }))

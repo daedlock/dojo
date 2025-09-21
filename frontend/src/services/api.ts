@@ -128,5 +128,12 @@ class ApiClient {
 export const ctfdApiClient = new ApiClient(CTFD_API_BASE_URL)
 export const dojoApiClient = new ApiClient(DOJO_API_BASE_URL)
 
+// Initialize tokens on both clients if available
+const storedToken = localStorage.getItem('ctfd_token')
+if (storedToken) {
+  ctfdApiClient.setToken(storedToken)
+  dojoApiClient.setToken(storedToken)
+}
+
 // Keep the default client pointing to dojo API for backwards compatibility
 export const apiClient = dojoApiClient

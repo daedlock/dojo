@@ -3,7 +3,8 @@ import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClient } from '@/lib/queryClient'
 import { ThemeProvider } from '@/components/theme/ThemeProvider'
 import { Layout } from '@/components/layout/Layout'
-import { useDojoStore } from '@/stores'
+import { ScrollToTop } from '@/components/router/ScrollToTop'
+import { initializeStores } from '@/stores'
 import { useEffect } from 'react'
 import DojoList from '@/pages/DojoList'
 import DojoDetail from '@/pages/DojoDetail'
@@ -17,14 +18,15 @@ import ForgotPasswordPage from '@/pages/ForgotPasswordPage'
 
 function App() {
   useEffect(() => {
-    // Only initialize dojos, not all stores to avoid conflicts
-    useDojoStore.getState().fetchDojos()
+    // Initialize all stores on app start
+    initializeStores()
   }, [])
 
   return (
     <ThemeProvider defaultTheme="system" storageKey="dojo-ui-theme">
       <QueryClientProvider client={queryClient}>
         <Router>
+          <ScrollToTop />
           <Routes>
             {/* Main Application Routes */}
             <Route path="/" element={<Layout><DojoList /></Layout>} />

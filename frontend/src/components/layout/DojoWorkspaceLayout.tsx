@@ -51,20 +51,31 @@ export function DojoWorkspaceLayout({
   onChallengeStart,
   onChallengeClose
 }: DojoWorkspaceLayoutProps) {
-  const [activeService, setActiveService] = useState<string>('terminal')
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
-  const [isFullScreen, setIsFullScreen] = useState(false)
-  const [sidebarWidth, setSidebarWidth] = useState(320)
+  // Use workspace state from Zustand store with individual selectors to avoid infinite loops
+  const activeService = useUIStore(state => state.workspaceState.activeService)
+  const sidebarCollapsed = useUIStore(state => state.workspaceState.sidebarCollapsed)
+  const isFullScreen = useUIStore(state => state.workspaceState.isFullScreen)
+  const sidebarWidth = useUIStore(state => state.workspaceState.sidebarWidth)
+  const commandPaletteOpen = useUIStore(state => state.workspaceState.commandPaletteOpen)
+  const workspaceHeaderHidden = useUIStore(state => state.workspaceState.workspaceHeaderHidden)
+
+  const setActiveService = useUIStore(state => state.setActiveService)
+  const setSidebarCollapsed = useUIStore(state => state.setSidebarCollapsed)
+  const setFullScreen = useUIStore(state => state.setFullScreen)
+  const setSidebarWidth = useUIStore(state => state.setSidebarWidth)
+  const setCommandPaletteOpen = useUIStore(state => state.setCommandPaletteOpen)
+  const setWorkspaceHeaderHidden = useUIStore(state => state.setWorkspaceHeaderHidden)
+
   const [isResizing, setIsResizing] = useState(false)
-  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false)
   const isHeaderHidden = useUIStore(state => state.isHeaderHidden)
   const setHeaderHidden = useUIStore(state => state.setHeaderHidden)
   const startChallengeMutation = useStartChallenge()
 
-  const { data: workspaceStatus } = useWorkspace({}, !!activeChallenge)
+  // Single workspace call that gets status and data in one request
+  // Only enable when we have an active challenge AND it's not currently starting
   const { data: workspaceData } = useWorkspace(
     { service: activeService },
-    !!activeChallenge && workspaceStatus?.active
+    !!activeChallenge && !activeChallenge.isStarting
   )
 
   // Get the current module (we only have one in workspace view)
@@ -121,12 +132,12 @@ export function DojoWorkspaceLayout({
     activeService,
     sidebarCollapsed,
     isFullScreen,
-    headerHidden: isHeaderHidden,
-    workspaceStatus,
+    headerHidden: workspaceHeaderHidden,
+    workspaceData,
     setActiveService,
     setSidebarCollapsed,
-    setIsFullScreen,
-    setHeaderHidden,
+    setIsFullScreen: setFullScreen,
+    setHeaderHidden: setWorkspaceHeaderHidden,
     onChallengeStart: handleChallengeStart,
     onChallengeClose
   })
@@ -137,22 +148,22 @@ export function DojoWorkspaceLayout({
     [hotkey.cmdShift('p')]: () => setCommandPaletteOpen(prev => !prev),
     [hotkey.ctrl('b')]: () => setSidebarCollapsed(prev => !prev),
     [hotkey.cmd('b')]: () => setSidebarCollapsed(prev => !prev),
-    [hotkey.ctrl('h')]: () => setHeaderHidden(prev => !prev),
-    [hotkey.cmd('h')]: () => setHeaderHidden(prev => !prev),
+    [hotkey.ctrl('h')]: () => setWorkspaceHeaderHidden(prev => !prev),
+    [hotkey.cmd('h')]: () => setWorkspaceHeaderHidden(prev => !prev),
     ['f11']: () => setIsFullScreen(prev => !prev),
     ['escape']: () => isFullScreen && setIsFullScreen(false),
-    [hotkey.ctrl('1')]: () => workspaceStatus?.active && setActiveService('terminal'),
-    [hotkey.ctrl('2')]: () => workspaceStatus?.active && setActiveService('code'),
-    [hotkey.ctrl('3')]: () => workspaceStatus?.active && setActiveService('desktop'),
-  }, [isFullScreen, workspaceStatus?.active])
+    [hotkey.ctrl('1')]: () => workspaceData?.active && setActiveService('terminal'),
+    [hotkey.ctrl('2')]: () => workspaceData?.active && setActiveService('code'),
+    [hotkey.ctrl('3')]: () => workspaceData?.active && setActiveService('desktop'),
+  }, [isFullScreen, workspaceData?.active])
 
   // Auto-expand module and reset service
   useEffect(() => {
     if (activeChallenge) {
       setActiveService('terminal')
-      setHeaderHidden(true)
+      // Don't auto-hide workspace header anymore since we want it visible by default
     }
-  }, [activeChallenge.challengeId, setHeaderHidden])
+  }, [activeChallenge.challengeId])
 
   // Full screen mode
   if (isFullScreen) {
@@ -160,7 +171,7 @@ export function DojoWorkspaceLayout({
       <FullScreenWorkspace
         activeChallenge={activeChallenge}
         activeService={activeService}
-        workspaceStatus={workspaceStatus}
+        workspaceStatus={workspaceData}
         workspaceData={workspaceData}
         onExitFullScreen={() => setIsFullScreen(false)}
       />
@@ -176,9 +187,9 @@ export function DojoWorkspaceLayout({
         sidebarCollapsed={sidebarCollapsed}
         sidebarWidth={sidebarWidth}
         isResizing={isResizing}
-        headerHidden={isHeaderHidden}
+        headerHidden={workspaceHeaderHidden}
         onSidebarCollapse={setSidebarCollapsed}
-        onHeaderToggle={setHeaderHidden}
+        onHeaderToggle={setWorkspaceHeaderHidden}
         onChallengeStart={handleChallengeStart}
         onChallengeClose={onChallengeClose}
         onResizeStart={handleResizeStart}
@@ -192,17 +203,18 @@ export function DojoWorkspaceLayout({
           dojoName={dojo.name}
           moduleName={currentModule?.name || 'Module'}
           activeService={activeService}
-          workspaceActive={workspaceStatus?.active || false}
+          workspaceActive={workspaceData?.active || false}
           isFullScreen={isFullScreen}
-          headerHidden={isHeaderHidden}
+          headerHidden={workspaceHeaderHidden}
           onServiceChange={setActiveService}
           onFullScreenToggle={() => setIsFullScreen(!isFullScreen)}
         />
 
         <WorkspaceContent
-          workspaceActive={workspaceStatus?.active || false}
+          workspaceActive={workspaceData?.active || false}
           workspaceData={workspaceData}
           activeService={activeService}
+          isStarting={activeChallenge?.isStarting || false}
         />
       </div>
 

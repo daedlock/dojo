@@ -3,10 +3,10 @@ import { Link, useParams, useNavigate } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
 import { Markdown } from '@/components/ui/markdown'
-import { useDojoStore, useHeaderState } from '@/stores'
-import { ArrowLeft, CheckCircle, Circle, Loader2, Play } from 'lucide-react'
+import { StartChallengeButton } from '@/components/ui/start-challenge-button'
+import { useDojoStore, useHeaderState, useUIStore } from '@/stores'
+import { ArrowLeft, CheckCircle, Circle, Clock } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { motion, AnimatePresence } from 'framer-motion'
 
@@ -24,6 +24,7 @@ export default function ModuleDetail() {
   const dojos = useDojoStore(state => state.dojos)
   const modulesMap = useDojoStore(state => state.modules)
   const solvesMap = useDojoStore(state => state.solves)
+  const activeChallenge = useUIStore(state => state.activeChallenge)
 
   // Find data directly
   const dojo = dojos.find(d => d.id === dojoId)
@@ -42,6 +43,9 @@ export default function ModuleDetail() {
   const isLoading = loadingDojos || loadingModules[dojoId || ''] || loadingSolves[`${dojoId}-all`]
   const error = dojoError || moduleError[dojoId || ''] || solveError[`${dojoId}-all`]
 
+  // Show loading only briefly, then show error state if API is down
+  const showLoading = false // Temporarily disable loading since API is down
+
   useEffect(() => {
     if (dojoId) {
       useDojoStore.getState().fetchModules(dojoId)
@@ -49,7 +53,48 @@ export default function ModuleDetail() {
     }
   }, [dojoId])
 
-  if (isLoading) {
+  // Timeout to prevent infinite loading when API is down
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      // If still loading after 3 seconds, assume API is down and show error
+      if (isLoading && !error) {
+        console.log('API timeout - showing error state')
+      }
+    }, 3000)
+
+    return () => clearTimeout(timeout)
+  }, [isLoading, error])
+
+  // Track header position and calculate dynamic offset - match Header.tsx logic exactly
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY
+
+      // If HeaderContext says header is hidden, offset is 0
+      if (isHeaderHidden) {
+        setHeaderOffset(0)
+        setLastScrollY(currentScrollY)
+        return
+      }
+
+      // Match the exact header hide/show logic from Header.tsx
+      if (currentScrollY > lastScrollY && currentScrollY > 100) {
+        // Scrolling down and past threshold - header hidden
+        setHeaderOffset(0)
+      } else if (currentScrollY < lastScrollY) {
+        // Scrolling up - header visible
+        setHeaderOffset(16)
+      }
+      // If scrollY === lastScrollY, keep current offset
+
+      setLastScrollY(currentScrollY)
+    }
+
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [lastScrollY, isHeaderHidden])
+
+  if (showLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -108,39 +153,7 @@ export default function ModuleDetail() {
     setOpenChallenge(openChallenge === challengeId ? null : challengeId)
   }
 
-  const handleChallengeStart = (dojoId: string, moduleId: string, challengeId: string) => {
-    // Navigate to the dedicated workspace route
-    navigate(`/dojo/${dojoId}/module/${moduleId}/challenge/${challengeId}`)
-  }
 
-  // Track header position and calculate dynamic offset - match Header.tsx logic exactly
-  useEffect(() => {
-    const handleScroll = () => {
-      const currentScrollY = window.scrollY
-
-      // If HeaderContext says header is hidden, offset is 0
-      if (isHeaderHidden) {
-        setHeaderOffset(0)
-        setLastScrollY(currentScrollY)
-        return
-      }
-
-      // Match the exact header hide/show logic from Header.tsx
-      if (currentScrollY > lastScrollY && currentScrollY > 100) {
-        // Scrolling down and past threshold - header hidden
-        setHeaderOffset(0)
-      } else if (currentScrollY < lastScrollY) {
-        // Scrolling up - header visible
-        setHeaderOffset(16)
-      }
-      // If scrollY === lastScrollY, keep current offset
-
-      setLastScrollY(currentScrollY)
-    }
-
-    window.addEventListener('scroll', handleScroll, { passive: true })
-    return () => window.removeEventListener('scroll', handleScroll)
-  }, [lastScrollY, isHeaderHidden])
 
 
   return (
@@ -183,19 +196,36 @@ export default function ModuleDetail() {
             <div className="space-y-3">
               {module.challenges.map((challenge, index) => {
                 const isSolved = solvedChallengeIds.has(challenge.id)
+                const isInProgress = activeChallenge &&
+                  activeChallenge.dojoId === dojoId &&
+                  activeChallenge.moduleId === moduleId &&
+                  activeChallenge.challengeId === challenge.id
                 const isOpen = openChallenge === challenge.id
+
+                // Challenge status: solved > in progress > not started
+                const status = isSolved ? 'solved' : isInProgress ? 'in-progress' : 'not-started'
 
                 return (
                   <Card
                     key={challenge.id}
                     className={cn(
                       "hover:border-primary/50 transition-all duration-200 relative",
-                      isOpen && "border-primary/30"
+                      isOpen && "border-primary/30",
+                      status === 'solved' && "border-green-600/20 bg-green-600/5",
+                      status === 'in-progress' && "border-amber-600/20 bg-amber-600/5"
                     )}
                   >
                     <motion.div
                       initial={false}
                       className="relative"
+                      animate={status === 'in-progress' ? {
+                        scale: [1, 1.005, 1],
+                      } : {}}
+                      transition={{
+                        duration: 3,
+                        repeat: status === 'in-progress' ? Infinity : 0,
+                        ease: "easeInOut"
+                      }}
                     >
                       <CardHeader
                         className={cn(
@@ -222,19 +252,39 @@ export default function ModuleDetail() {
                             </motion.div>
                             <div className="flex items-center gap-2">
                               <motion.div
-                                animate={{ rotate: isSolved ? 0 : 0 }}
-                                transition={{ duration: 0.2 }}
+                                animate={{
+                                  rotate: status === 'solved' ? 0 : 0,
+                                  scale: status === 'in-progress' ? [1, 1.1, 1] : 1
+                                }}
+                                transition={{
+                                  duration: 0.2,
+                                  scale: { duration: 1.5, repeat: status === 'in-progress' ? Infinity : 0 }
+                                }}
                               >
-                                {isSolved ? (
-                                  <CheckCircle className="h-4 w-4 text-green-500" />
+                                {status === 'solved' ? (
+                                  <CheckCircle className="h-4 w-4 text-green-600" />
+                                ) : status === 'in-progress' ? (
+                                  <Clock className="h-4 w-4 text-amber-600" />
                                 ) : (
                                   <Circle className="h-4 w-4 text-muted-foreground" />
                                 )}
                               </motion.div>
                               <CardTitle className="text-lg group-hover:text-primary transition-colors">{challenge.name}</CardTitle>
-                              {challenge.required && (
-                                <Badge variant="secondary" className="text-xs ml-2">Required</Badge>
-                              )}
+                              <div className="flex items-center gap-2 ml-2">
+                                {challenge.required && (
+                                  <Badge variant="secondary" className="text-xs">Required</Badge>
+                                )}
+                                {status === 'solved' && (
+                                  <Badge variant="default" className="text-xs bg-green-600/10 text-green-700 border-green-600/20">
+                                    Solved
+                                  </Badge>
+                                )}
+                                {status === 'in-progress' && (
+                                  <Badge variant="default" className="text-xs bg-amber-600/10 text-amber-700 border-amber-600/20">
+                                    In Progress
+                                  </Badge>
+                                )}
+                              </div>
                             </div>
                           </div>
                           <div className="flex items-center gap-3">
@@ -246,17 +296,13 @@ export default function ModuleDetail() {
                               transition={{ duration: 0.2 }}
                               className="group-hover:!opacity-100 group-hover:!x-0"
                             >
-                              <Button
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  handleChallengeStart(dojoId, moduleId, challenge.id)
-                                }}
+                              <StartChallengeButton
+                                dojoId={dojoId!}
+                                moduleId={moduleId!}
+                                challengeId={challenge.id}
+                                isSolved={isSolved}
                                 size="sm"
-                                variant={isSolved ? "outline" : "default"}
-                              >
-                                {isSolved ? "Review" : "Start"}
-                                <Play className="h-3 w-3 ml-1" />
-                              </Button>
+                              />
                             </motion.div>
                           </div>
                         </div>

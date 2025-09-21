@@ -1,4 +1,4 @@
-import { ctfdApiClient } from './api'
+import { ctfdApiClient, dojoApiClient } from './api'
 
 export interface LoginCredentials {
   name: string  // username or email
@@ -45,6 +45,7 @@ class AuthService {
 
     if (response.success && response.data?.token) {
       ctfdApiClient.setToken(response.data.token)
+      dojoApiClient.setToken(response.data.token)  // Set token for dojo API as well
       // Store user data locally
       localStorage.setItem('ctfd_user', JSON.stringify(response.data))
     }
@@ -57,6 +58,7 @@ class AuthService {
 
     if (response.success && response.data?.token) {
       ctfdApiClient.setToken(response.data.token)
+      dojoApiClient.setToken(response.data.token)  // Set token for dojo API as well
       // Store user data locally
       localStorage.setItem('ctfd_user', JSON.stringify(response.data))
     }
@@ -66,6 +68,7 @@ class AuthService {
 
   async logout(): Promise<{ success: boolean }> {
     ctfdApiClient.clearToken()
+    dojoApiClient.clearToken()  // Clear token for dojo API as well
     localStorage.removeItem('ctfd_user')
     return { success: true }
   }
