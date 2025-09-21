@@ -9,25 +9,6 @@ interface Command {
   action: () => void | Promise<void>
   condition?: () => boolean
 }
-import {
-  PanelLeftClose,
-  PanelLeftOpen,
-  Maximize,
-  Minimize,
-  Flag,
-  Terminal,
-  Code,
-  Monitor,
-  X,
-  RotateCcw,
-  Keyboard,
-  ArrowLeft,
-  ArrowRight,
-  Home,
-  Search,
-  Eye,
-  EyeOff
-} from 'lucide-react'
 
 interface UseCommandsProps {
   // Workspace state
@@ -200,8 +181,7 @@ export function useCommands({
         category: 'Quick Actions',
         shortcut: 'Ctrl+Shift+R',
         action: () => {
-          // This would trigger workspace reset - implementation depends on workspace API
-          console.log('Workspace reset requested')
+          // TODO: Implement workspace reset when API is available
         }
       })
     }
@@ -214,8 +194,7 @@ export function useCommands({
       category: 'Help',
       shortcut: 'Ctrl+/',
       action: () => {
-        // This could open a help modal or show shortcuts
-        console.log('Show shortcuts help')
+        // TODO: Implement shortcuts help modal
       }
     })
 

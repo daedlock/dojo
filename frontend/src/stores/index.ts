@@ -73,19 +73,3 @@ export const useAuthenticatedUser = () => {
   }
 }
 
-// Hook that matches the old useIsAuthenticated interface
-export const useIsAuthenticated = () => {
-  const user = useAuthStore(state => state.user)
-  const isAuthenticated = useAuthStore(state => state.isAuthenticated)
-  const isLoading = useAuthStore(state => state.isLoading)
-
-  return {
-    isAuthenticated,
-    isLoading,
-    user: user ? {
-      name: user.username,
-      email: user.email,
-      admin: user.type === 'admin'
-    } : null
-  }
-}

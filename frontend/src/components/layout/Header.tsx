@@ -12,9 +12,8 @@ import {
 import { Logo } from '@/components/ui/Logo'
 import { useAuthStore, useDojoStore, useUIStore } from '@/stores'
 import {
-  Menu, X, User, LogOut, Shield, Home, ChevronRight,
-  BookOpen, Trophy, Users, Settings, Search, Bell,
-  Terminal, Code, Monitor, Flag
+  Menu, X, User, LogOut, Shield, ChevronRight,
+  BookOpen, Trophy, Users, Settings, Search
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { ThemeSelector } from '@/components/ui/theme-selector'
@@ -139,11 +138,11 @@ export function Header() {
                     <div className="flex items-center space-x-2">
                       <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
                         <span className="text-sm font-medium text-primary">
-                          {user.name?.charAt(0).toUpperCase()}
+                          {user.username?.charAt(0).toUpperCase()}
                         </span>
                       </div>
                       <div className="text-left hidden xl:block">
-                        <div className="text-sm font-medium text-foreground">{user.name}</div>
+                        <div className="text-sm font-medium text-foreground">{user.username}</div>
                         <div className="text-xs text-muted-foreground">Level 5</div>
                       </div>
                     </div>
@@ -152,7 +151,7 @@ export function Header() {
                 <DropdownMenuContent align="end" className="w-56">
                   <DropdownMenuLabel className="font-normal">
                     <div className="flex flex-col space-y-1">
-                      <p className="text-sm font-medium leading-none">{user.name}</p>
+                      <p className="text-sm font-medium leading-none">{user.username}</p>
                       <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
                     </div>
                   </DropdownMenuLabel>
@@ -165,7 +164,7 @@ export function Header() {
                     <Settings className="mr-2 h-4 w-4" />
                     <span>Settings</span>
                   </DropdownMenuItem>
-                  {user.admin && (
+                  {user.type === 'admin' && (
                     <>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem>
@@ -276,10 +275,10 @@ export function Header() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-2">
                       <div className="text-sm">
-                        <div className="font-medium text-foreground">{user.name}</div>
+                        <div className="font-medium text-foreground">{user.username}</div>
                         <div className="text-xs text-muted-foreground">{user.email}</div>
                       </div>
-                      {user.admin && (
+                      {user.type === 'admin' && (
                         <Badge variant="destructive" className="text-xs">
                           Admin
                         </Badge>

@@ -1,4 +1,3 @@
-// Base URLs for different API types
 export const CTFD_API_BASE_URL = import.meta.env.VITE_CTFD_API_URL || 'http://localhost/api/v1'
 export const DOJO_API_BASE_URL = import.meta.env.VITE_DOJO_API_URL || 'http://localhost/pwncollege_api/v1'
 

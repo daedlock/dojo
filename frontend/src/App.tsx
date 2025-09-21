@@ -12,9 +12,7 @@ import ModuleDetail from '@/pages/ModuleDetail'
 import WorkspacePage from '@/pages/WorkspacePage'
 import LeaderboardPage from '@/pages/LeaderboardPage'
 import CommunityPage from '@/pages/CommunityPage'
-import LoginPage from '@/pages/LoginPage'
-import RegisterPage from '@/pages/RegisterPage'
-import ForgotPasswordPage from '@/pages/ForgotPasswordPage'
+import { ClerkLoginForm, ClerkSignupForm, ForgotPasswordForm } from '@/components/auth'
 
 function App() {
   useEffect(() => {
@@ -37,9 +35,9 @@ function App() {
             <Route path="/community" element={<Layout><CommunityPage /></Layout>} />
 
             {/* Authentication Routes - without Layout (they have their own full-screen design) */}
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/register" element={<RegisterPage />} />
-            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/login" element={<ClerkLoginForm />} />
+            <Route path="/register" element={<ClerkSignupForm />} />
+            <Route path="/forgot-password" element={<ForgotPasswordForm />} />
           </Routes>
         </Router>
       </QueryClientProvider>

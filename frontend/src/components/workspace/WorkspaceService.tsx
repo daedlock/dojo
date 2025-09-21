@@ -12,7 +12,7 @@ export function WorkspaceService({ iframeSrc, activeService, onReady }: Workspac
   const [error, setError] = useState<string | null>(null)
   const [isReady, setIsReady] = useState(false)
   const iframeRef = useRef<HTMLIFrameElement>(null)
-  const checkIntervalRef = useRef<NodeJS.Timeout>()
+  const checkIntervalRef = useRef<NodeJS.Timeout | undefined>()
   const retryCount = useRef(0)
 
   const maxRetries = 30 // 30 seconds

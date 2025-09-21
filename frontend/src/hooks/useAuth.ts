@@ -86,28 +86,11 @@ export function useChangePassword() {
 
 export function useResetPassword() {
   return useMutation({
-    mutationFn: (data: ResetPasswordData) => authService.resetPassword(data),
+    mutationFn: ({ token, password }: { token: string; password: string }) =>
+      authService.resetPassword(token, password),
   })
 }
 
-export function useConfirmResetPassword() {
-  return useMutation({
-    mutationFn: ({ token, password }: { token: string; password: string }) => 
-      authService.confirmResetPassword(token, password),
-  })
-}
-
-export function useVerifyEmail() {
-  return useMutation({
-    mutationFn: (token: string) => authService.verifyEmail(token),
-  })
-}
-
-export function useResendVerification() {
-  return useMutation({
-    mutationFn: () => authService.resendVerification(),
-  })
-}
 
 // Helper hooks
 export function useIsAuthenticated() {

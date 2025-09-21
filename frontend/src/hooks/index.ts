@@ -2,4 +2,3 @@
 export * from './useAuth'
 export * from './useDojo'
 export * from './useWorkspace'
-export * from './useSearch'

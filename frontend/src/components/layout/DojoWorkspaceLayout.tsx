@@ -9,31 +9,11 @@ import { useHotkeys, hotkey } from '@/hooks/useHotkeys'
 import { WorkspaceSidebar } from '@/components/workspace/WorkspaceSidebar'
 import { WorkspaceHeader } from '@/components/workspace/WorkspaceHeader'
 import { WorkspaceContent } from '@/components/workspace/WorkspaceContent'
-
-interface Challenge {
-  id: string
-  name: string
-  required: boolean
-  description?: string
-  solved?: boolean
-}
-
-interface Module {
-  id: string
-  name: string
-  challenges: Challenge[]
-  description?: string
-}
-
-interface Dojo {
-  id: string
-  name: string
-  description?: string
-}
+import type { Dojo, DojoModule } from '@/types/api'
 
 interface DojoWorkspaceLayoutProps {
   dojo: Dojo
-  modules: Module[]
+  modules: DojoModule[]
   activeChallenge: {
     dojoId: string
     moduleId: string
@@ -67,8 +47,6 @@ export function DojoWorkspaceLayout({
   const setWorkspaceHeaderHidden = useUIStore(state => state.setWorkspaceHeaderHidden)
 
   const [isResizing, setIsResizing] = useState(false)
-  const isHeaderHidden = useUIStore(state => state.isHeaderHidden)
-  const setHeaderHidden = useUIStore(state => state.setHeaderHidden)
   const startChallengeMutation = useStartChallenge()
 
   // Single workspace call that gets status and data in one request
@@ -79,7 +57,7 @@ export function DojoWorkspaceLayout({
       service: activeService,
       challenge: `${activeChallenge.dojoId}-${activeChallenge.moduleId}-${activeChallenge.challengeId}`
     },
-    !!activeChallenge && !activeChallenge.isStarting
+    !!activeChallenge
   )
 
   // Get the current module (we only have one in workspace view)
@@ -136,12 +114,11 @@ export function DojoWorkspaceLayout({
 
   const commands = useCommands({
     activeChallenge,
-    modules,
+    modules: modules.map(m => ({ ...m, challenges: m.challenges.map(c => ({ ...c, id: c.id.toString() })) })),
     activeService,
     sidebarCollapsed,
     isFullScreen,
     headerHidden: workspaceHeaderHidden,
-    workspaceData,
     setActiveService,
     setSidebarCollapsed,
     setIsFullScreen: setFullScreen,
@@ -152,14 +129,14 @@ export function DojoWorkspaceLayout({
 
   // Setup hotkeys
   useHotkeys({
-    [hotkey.ctrlShift('p')]: () => setCommandPaletteOpen(prev => !prev),
-    [hotkey.cmdShift('p')]: () => setCommandPaletteOpen(prev => !prev),
-    [hotkey.ctrl('b')]: () => setSidebarCollapsed(prev => !prev),
-    [hotkey.cmd('b')]: () => setSidebarCollapsed(prev => !prev),
-    [hotkey.ctrl('h')]: () => setWorkspaceHeaderHidden(prev => !prev),
-    [hotkey.cmd('h')]: () => setWorkspaceHeaderHidden(prev => !prev),
-    ['f11']: () => setIsFullScreen(prev => !prev),
-    ['escape']: () => isFullScreen && setIsFullScreen(false),
+    [hotkey.ctrlShift('p')]: () => setCommandPaletteOpen(!commandPaletteOpen),
+    [hotkey.cmdShift('p')]: () => setCommandPaletteOpen(!commandPaletteOpen),
+    [hotkey.ctrl('b')]: () => setSidebarCollapsed(!sidebarCollapsed),
+    [hotkey.cmd('b')]: () => setSidebarCollapsed(!sidebarCollapsed),
+    [hotkey.ctrl('h')]: () => setWorkspaceHeaderHidden(!workspaceHeaderHidden),
+    [hotkey.cmd('h')]: () => setWorkspaceHeaderHidden(!workspaceHeaderHidden),
+    ['f11']: () => setFullScreen(!isFullScreen),
+    ['escape']: () => isFullScreen && setFullScreen(false),
     [hotkey.ctrl('1')]: () => workspaceData?.active && setActiveService('terminal'),
     [hotkey.ctrl('2')]: () => workspaceData?.active && setActiveService('code'),
     [hotkey.ctrl('3')]: () => workspaceData?.active && setActiveService('desktop'),
@@ -181,7 +158,6 @@ export function DojoWorkspaceLayout({
         activeService={activeService}
         workspaceStatus={workspaceData}
         workspaceData={workspaceData}
-        onExitFullScreen={() => setIsFullScreen(false)}
       />
     )
   }
@@ -190,7 +166,7 @@ export function DojoWorkspaceLayout({
     <div className="flex h-screen">
       {/* Sidebar */}
       <WorkspaceSidebar
-        module={currentModule}
+        module={currentModule ? { ...currentModule, challenges: currentModule.challenges.map(c => ({ ...c, id: c.id.toString() })) } : { id: '', name: 'Module', challenges: [] }}
         activeChallenge={activeChallenge}
         sidebarCollapsed={sidebarCollapsed}
         sidebarWidth={sidebarWidth}
@@ -215,14 +191,14 @@ export function DojoWorkspaceLayout({
           isFullScreen={isFullScreen}
           headerHidden={workspaceHeaderHidden}
           onServiceChange={setActiveService}
-          onFullScreenToggle={() => setIsFullScreen(!isFullScreen)}
+          onFullScreenToggle={() => setFullScreen(!isFullScreen)}
         />
 
         <WorkspaceContent
           workspaceActive={workspaceData?.active || false}
           workspaceData={workspaceData}
           activeService={activeService}
-          isStarting={activeChallenge?.isStarting || false}
+          isStarting={false}
         />
       </div>
 

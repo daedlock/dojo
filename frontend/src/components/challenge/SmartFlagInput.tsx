@@ -1,7 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
 import { Flag, Check, X, Loader2, Send } from 'lucide-react'
-import { Badge } from '@/components/ui/badge'
-import { Input } from '@/components/ui/input'
 import {
   Popover,
   PopoverContent,
@@ -10,7 +8,6 @@ import {
 import { cn } from '@/lib/utils'
 import { useSubmitChallengeSolution } from '@/hooks/useDojo'
 import { useDojoStore } from '@/stores'
-import { motion, AnimatePresence } from 'framer-motion'
 
 interface SmartFlagInputProps {
   dojoId: string
@@ -170,12 +167,6 @@ export function SmartFlagInput({
     }
   }
 
-  const getInputVariant = () => {
-    if (status === 'success') return 'success'
-    if (status === 'error') return 'destructive'
-    if (isValidFlag && status === 'idle') return 'valid'
-    return 'default'
-  }
 
   return (
     <div className="relative">

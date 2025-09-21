@@ -58,46 +58,54 @@ function matchesHotkey(event: KeyboardEvent, config: HotkeyConfig): boolean {
 const globalHotkeys = new Map<string, HotkeyHandler>()
 let globalListenerAttached = false
 
+// Handle keydown events from main document or iframes
+function handleKeydown(event: KeyboardEvent) {
+  // Skip if user is typing in an input
+  const target = event.target as HTMLElement
+  if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+    return
+  }
+
+  // Check all registered hotkeys
+  for (const [hotkeyString, handler] of globalHotkeys.entries()) {
+    const [modifiers, key] = hotkeyString.split('+').reduce((acc, part) => {
+      if (['ctrl', 'cmd', 'shift', 'alt'].includes(part)) {
+        acc[0].push(part)
+      } else {
+        acc[1] = part
+      }
+      return acc
+    }, [[] as string[], ''])
+
+    const config: HotkeyConfig = {
+      key,
+      ctrl: modifiers.includes('ctrl'),
+      cmd: modifiers.includes('cmd'),
+      shift: modifiers.includes('shift'),
+      alt: modifiers.includes('alt'),
+      preventDefault: true
+    }
+
+    if (matchesHotkey(event, config)) {
+      event.preventDefault()
+      event.stopPropagation()
+      handler()
+      return
+    }
+  }
+}
+
+
 function attachGlobalListener() {
   if (globalListenerAttached) return
 
-  const handleKeydown = (event: KeyboardEvent) => {
-    // Skip if user is typing in an input
-    const target = event.target as HTMLElement
-    if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
-      return
-    }
-
-    // Check all registered hotkeys
-    for (const [hotkeyString, handler] of globalHotkeys.entries()) {
-      const [modifiers, key] = hotkeyString.split('+').reduce((acc, part) => {
-        if (['ctrl', 'cmd', 'shift', 'alt'].includes(part)) {
-          acc[0].push(part)
-        } else {
-          acc[1] = part
-        }
-        return acc
-      }, [[] as string[], ''])
-
-      const config: HotkeyConfig = {
-        key,
-        ctrl: modifiers.includes('ctrl'),
-        cmd: modifiers.includes('cmd'),
-        shift: modifiers.includes('shift'),
-        alt: modifiers.includes('alt'),
-        preventDefault: true
-      }
-
-      if (matchesHotkey(event, config)) {
-        event.preventDefault()
-        event.stopPropagation()
-        handler()
-        return
-      }
-    }
-  }
-
+  // Attach to main document with capture to catch events before they reach iframes
   document.addEventListener('keydown', handleKeydown, { capture: true })
+
+  // For cross-origin iframes, also listen at the window level
+  // This catches some browser-level hotkeys that still bubble up
+  window.addEventListener('keydown', handleKeydown, { capture: true })
+
   globalListenerAttached = true
 }
 
