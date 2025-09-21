@@ -1,15 +1,17 @@
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { useDojoStore, useUIStore } from '@/stores'
 import { DojoWorkspaceLayout } from '@/components/layout/DojoWorkspaceLayout'
 import { Loader2, AlertCircle, ArrowLeft } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 
 export default function WorkspacePage() {
   const { dojoId, moduleId, challengeId } = useParams()
   const navigate = useNavigate()
+  const location = useLocation()
   const [isExiting, setIsExiting] = useState(false)
+  const previousPathRef = useRef<string>('')
 
   // Basic state access without complex selectors
   const dojos = useDojoStore(state => state.dojos)
@@ -31,6 +33,18 @@ export default function WorkspacePage() {
       useDojoStore.getState().fetchModules(dojoId)
     }
   }, [dojoId])
+
+  // Check if we're already in workspace (navigating between challenges)
+  const isAlreadyInWorkspace = useRef(false)
+
+  useEffect(() => {
+    // Check if previous path was also a workspace page
+    const wasInWorkspace = previousPathRef.current.includes('/challenge/')
+    isAlreadyInWorkspace.current = wasInWorkspace
+
+    // Update previous path for next navigation
+    previousPathRef.current = location.pathname
+  }, [location.pathname])
 
   useEffect(() => {
     if (dojo && module && challenge) {
@@ -92,8 +106,8 @@ export default function WorkspacePage() {
   return (
     <AnimatePresence mode="wait">
       <motion.div
-        key={`workspace-${dojoId}-${moduleId}-${challengeId}`}
-        initial={{ opacity: 0, scale: 0.98, y: 20 }}
+        key={`workspace-${dojoId}-${moduleId}`}  // Don't include challengeId - keep same component instance
+        initial={isAlreadyInWorkspace.current ? false : { opacity: 0, scale: 0.98, y: 20 }}
         animate={{
           opacity: isExiting ? 0 : 1,
           scale: isExiting ? 0.98 : 1,
@@ -101,7 +115,7 @@ export default function WorkspacePage() {
         }}
         exit={{ opacity: 0, scale: 0.98, y: 20 }}
         transition={{
-          duration: 0.2,
+          duration: isExiting ? 0.2 : (isAlreadyInWorkspace.current ? 0 : 0.2),
           ease: [0.25, 0.46, 0.45, 0.94] // Custom ease for smooth feel
         }}
         className="h-screen w-full"

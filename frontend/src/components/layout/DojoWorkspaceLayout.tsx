@@ -73,8 +73,12 @@ export function DojoWorkspaceLayout({
 
   // Single workspace call that gets status and data in one request
   // Only enable when we have an active challenge AND it's not currently starting
+  // Include challenge info in query key so it refetches when challenge changes
   const { data: workspaceData } = useWorkspace(
-    { service: activeService },
+    {
+      service: activeService,
+      challenge: `${activeChallenge.dojoId}-${activeChallenge.moduleId}-${activeChallenge.challengeId}`
+    },
     !!activeChallenge && !activeChallenge.isStarting
   )
 
@@ -82,6 +86,10 @@ export function DojoWorkspaceLayout({
   const currentModule = modules[0]
 
   const handleChallengeStart = async (moduleId: string, challengeId: string) => {
+    // 1. Navigate immediately for instant UX
+    onChallengeStart(dojo.id, moduleId, challengeId)
+
+    // 2. Start challenge on server in background
     try {
       await startChallengeMutation.mutateAsync({
         dojoId: dojo.id,
@@ -89,7 +97,7 @@ export function DojoWorkspaceLayout({
         challengeId,
         practice: false
       })
-      onChallengeStart(dojo.id, moduleId, challengeId)
+      console.log('Challenge started successfully')
     } catch (error) {
       console.error('Failed to start challenge:', error)
     }

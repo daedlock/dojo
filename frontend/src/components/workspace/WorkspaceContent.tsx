@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion'
+import { useCallback } from 'react'
 import { WorkspaceService } from './WorkspaceService'
 
 interface WorkspaceContentProps {
@@ -15,6 +16,10 @@ export function WorkspaceContent({
   isStarting = false
 }: WorkspaceContentProps) {
   const iframeSrc = workspaceData?.iframe_src
+
+  const handleReady = useCallback(() => {
+    console.log(`${activeService} service ready`)
+  }, [activeService])
   return (
     <motion.div
       className="flex-1 p-4"
@@ -38,7 +43,7 @@ export function WorkspaceContent({
         <WorkspaceService
           iframeSrc={iframeSrc}
           activeService={activeService}
-          onReady={() => console.log(`${activeService} service ready`)}
+          onReady={handleReady}
         />
       ) : (
         <div className="flex items-center justify-center h-full text-muted-foreground">
