@@ -1,4 +1,20 @@
 services:
+  frontend:
+    container_name: frontend
+    profiles:
+      - main
+    restart: always
+    build: ./frontend
+    environment:
+      - VIRTUAL_HOST=future.${DOJO_HOST}
+      - VIRTUAL_PORT=80
+      - LETSENCRYPT_HOST=future.${DOJO_HOST}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
   splunk:
     container_name: splunk
     profiles:
