@@ -7,11 +7,22 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useState, useEffect, useRef } from 'react'
 
 export default function WorkspacePage() {
-  const { dojoId, moduleId, challengeId } = useParams()
+  const { dojoId, moduleId, challengeId, resourceId } = useParams()
   const navigate = useNavigate()
   const location = useLocation()
   const [isExiting, setIsExiting] = useState(false)
   const previousPathRef = useRef<string>('')
+
+  // Extract resource from query params if using /workspace/ route
+  const searchParams = new URLSearchParams(location.search)
+  const queryResourceId = searchParams.get('resource')
+
+  // Determine the final resource ID (from URL params or query params)
+  const finalResourceId = resourceId || queryResourceId
+
+  // Determine if we're in challenge or resource mode
+  const isResourceMode = !!finalResourceId
+  const isChallenge = !!challengeId
 
   // Basic state access without complex selectors
   const dojos = useDojoStore(state => state.dojos)
@@ -47,6 +58,7 @@ export default function WorkspacePage() {
   } : undefined
 
   const challenge = enrichedModule?.challenges?.find(c => c.id === challengeId)
+  const resource = enrichedModule?.resources?.find(r => r.id === finalResourceId)
 
   useEffect(() => {
     if (dojoId) {
@@ -60,7 +72,7 @@ export default function WorkspacePage() {
 
   useEffect(() => {
     // Check if previous path was also a workspace page
-    const wasInWorkspace = previousPathRef.current.includes('/challenge/')
+    const wasInWorkspace = previousPathRef.current.includes('/challenge/') || previousPathRef.current.includes('/resource/')
     isAlreadyInWorkspace.current = wasInWorkspace
 
     // Update previous path for next navigation
@@ -109,12 +121,20 @@ export default function WorkspacePage() {
     )
   }
 
-  if (!enrichedModule || !challenge) {
+  // Check if we have the required data based on the mode
+  const hasRequiredData = enrichedModule && (
+    (isChallenge && challenge) ||
+    (isResourceMode && resource)
+  )
+
+  if (!hasRequiredData) {
+    const notFoundText = isResourceMode ? 'Learning material not found' : 'Challenge not found'
+
     return (
       <div className="min-h-screen bg-background text-foreground p-6 flex items-center justify-center">
         <div className="text-center">
           <AlertCircle className="h-12 w-12 text-destructive mx-auto mb-4" />
-          <h1 className="text-2xl font-bold mb-4">Challenge not found</h1>
+          <h1 className="text-2xl font-bold mb-4">{notFoundText}</h1>
           <Button variant="outline" onClick={() => navigate(`/dojo/${dojoId}`)}>
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Dojo
@@ -144,14 +164,27 @@ export default function WorkspacePage() {
         <DojoWorkspaceLayout
           dojo={dojo!}
           modules={[enrichedModule]}
-          activeChallenge={{
+          activeChallenge={isChallenge ? {
             dojoId: dojoId!,
             moduleId: moduleId!,
             challengeId: challengeId!,
-            name: challenge.name
+            name: challenge!.name
+          } : {
+            dojoId: dojoId!,
+            moduleId: moduleId!,
+            challengeId: 'resource',
+            name: resource!.name
           }}
+          activeResource={isResourceMode ? resource : undefined}
           onChallengeStart={(dojoId, moduleId, challengeId) => {
             navigate(`/dojo/${dojoId}/module/${moduleId}/challenge/${challengeId}`)
+          }}
+          onResourceSelect={(resourceId) => {
+            if (resourceId) {
+              navigate(`/dojo/${dojoId}/module/${moduleId}/resource/${resourceId}`)
+            } else {
+              navigate(`/dojo/${dojoId}/module/${moduleId}`)
+            }
           }}
           onChallengeClose={() => {
             // Start exit animation, then navigate

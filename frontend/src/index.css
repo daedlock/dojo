@@ -350,9 +350,10 @@
   }
 
   .prose strong,
-  .prose b {
+  .prose b, .prose a {
     @apply text-foreground font-semibold;
   }
+
 
   .prose em,
   .prose i {
@@ -747,5 +748,10 @@
   }
   .prose table > :last-child > tr:last-child > :last-child {
     border-bottom-right-radius: 8px !important;
+  }
+
+  .prose a {
+    @apply text-foreground underline;
+    
   }
 }

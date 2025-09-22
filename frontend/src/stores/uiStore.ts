@@ -4,6 +4,14 @@ interface UIStore {
   // Header state
   isHeaderHidden: boolean
 
+  // Animation settings
+  animations: {
+    fast: number      // 150ms - hover effects, micro-interactions
+    medium: number    // 250ms - page transitions, content switching
+    slow: number      // 400ms - modals, complex layout changes
+    easing: string    // cubic-bezier for smooth transitions
+  }
+
   // Workspace state
   workspaceState: {
     sidebarCollapsed: boolean
@@ -53,7 +61,7 @@ const getPreferredService = (): string => {
 
 const defaultWorkspaceState = {
   sidebarCollapsed: false,
-  sidebarWidth: 300,
+  sidebarWidth: 380,
   isFullScreen: false,
   activeService: getPreferredService(),
   preferredService: getPreferredService(),
@@ -61,9 +69,17 @@ const defaultWorkspaceState = {
   workspaceHeaderHidden: false
 }
 
+const defaultAnimations = {
+  fast: 0.15,    // 150ms - hover effects, micro-interactions
+  medium: 0.25,  // 250ms - page transitions, content switching
+  slow: 0.4,     // 400ms - modals, complex layout changes
+  easing: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)' // Apple-grade easing
+}
+
 export const useUIStore = create<UIStore>((set) => ({
   // Initial state
   isHeaderHidden: false,
+  animations: defaultAnimations,
   workspaceState: defaultWorkspaceState,
   activeChallenge: null,
 
@@ -188,3 +204,6 @@ export const useActiveChallenge = () => useUIStore(state => ({
   activeChallenge: state.activeChallenge,
   setActiveChallenge: state.setActiveChallenge
 }))
+
+// Animation selector for easy access across components
+export const useAnimations = () => useUIStore(state => state.animations)

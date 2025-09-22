@@ -23,6 +23,16 @@ export interface DojoModulesResponse {
     id: string
     name: string
     description?: string
+    resources?: Array<{
+      id: string
+      name: string
+      type: 'markdown' | 'lecture' | 'header'
+      content?: string
+      video?: string
+      playlist?: string
+      slides?: string
+      expandable?: boolean
+    }>
     challenges: Array<{
       id: string
       name: string

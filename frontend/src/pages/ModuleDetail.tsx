@@ -5,8 +5,9 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Badge } from '@/components/ui/badge'
 import { Markdown } from '@/components/ui/markdown'
 import { StartChallengeButton } from '@/components/ui/start-challenge-button'
+import { StartResourceButton } from '@/components/ui/start-resource-button'
 import { useDojoStore, useHeaderState, useUIStore } from '@/stores'
-import { ArrowLeft, CheckCircle, Circle, Clock } from 'lucide-react'
+import { ArrowLeft, CheckCircle, Circle, Clock, FileText, Video, ChevronRight, Play, BookOpen } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { motion, AnimatePresence } from 'framer-motion'
 
@@ -191,6 +192,144 @@ export default function ModuleDetail() {
         <div className="space-y-8">
           {module.description && (
                 <Markdown>{module.description}</Markdown>
+          )}
+
+          {module.resources && module.resources.length > 0 && (
+            <div className="mt-12">
+              <h2 className="text-2xl font-bold mb-6">Learning Materials</h2>
+              <div className="space-y-3">
+                {module.resources
+                  .filter(resource => resource.type === 'lecture' || resource.type === 'markdown')
+                  .map((resource, index) => {
+                  const isOpen = openChallenge === `resource-${index}`
+
+                  // if (resource.type === 'markdown' && resource.expandable === false) {
+                  //   return (
+                  //     <div key={resource.id} className="prose prose-sm dark:prose-invert max-w-none mb-6">
+                  //       <Markdown>{resource.content || ''}</Markdown>
+                  //     </div>
+                  //   )
+                  // }
+
+                  return (
+                    <Card key={resource.id} className={cn(
+                      "hover:border-primary/50 transition-all duration-200",
+                      isOpen && "border-primary/30"
+                    )}>
+                      <CardHeader
+                        className="pb-3 pt-4 cursor-pointer group"
+                        onClick={() => setOpenChallenge(isOpen ? null : `resource-${index}`)}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            {resource.type === 'lecture' ? (
+                              <Video className="h-5 w-5 text-primary" />
+                            ) : (
+                              <FileText className="h-5 w-5 text-primary" />
+                            )}
+                            <CardTitle className="text-lg group-hover:text-primary transition-colors">
+                              {resource.name}
+                            </CardTitle>
+                            {resource.type === 'lecture' && resource.video && (
+                              <Badge variant="secondary" className="text-xs">Video</Badge>
+                            )}
+                            {resource.type === 'lecture' && resource.slides && (
+                              <Badge variant="secondary" className="text-xs">Slides</Badge>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <motion.div
+                              animate={{
+                                opacity: isOpen ? 1 : 0,
+                                x: isOpen ? 0 : 10
+                              }}
+                              transition={{ duration: 0.2 }}
+                              className="group-hover:!opacity-100 group-hover:!x-0"
+                            >
+                              <StartResourceButton
+                                dojoId={dojoId!}
+                                moduleId={moduleId!}
+                                resourceId={resource.id}
+                                size="sm"
+                                className="gap-2"
+                              />
+                            </motion.div>
+                            <ChevronRight className={cn(
+                              "h-5 w-5 text-muted-foreground transition-transform duration-200",
+                              isOpen && "rotate-90"
+                            )} />
+                          </div>
+                        </div>
+                      </CardHeader>
+
+                      <AnimatePresence initial={false}>
+                        {isOpen && (
+                          <motion.div
+                            key={`resource-content-${resource.id}`}
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{
+                              height: "auto",
+                              opacity: 1,
+                              transition: {
+                                height: { duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] },
+                                opacity: { duration: 0.2, delay: 0.1 }
+                              }
+                            }}
+                            exit={{
+                              height: 0,
+                              opacity: 0,
+                              transition: {
+                                height: { duration: 0.2, ease: [0.25, 0.46, 0.45, 0.94] },
+                                opacity: { duration: 0.1 }
+                              }
+                            }}
+                            style={{ overflow: "hidden" }}
+                          >
+                            <CardContent className="border-t">
+                              <motion.div
+                                initial={{ y: -10, opacity: 0 }}
+                                animate={{ y: 0, opacity: 1 }}
+                                exit={{ y: -10, opacity: 0 }}
+                                transition={{ duration: 0.2, delay: 0.1 }}
+                              >
+                                {resource.type === 'lecture' && resource.video && (
+                                  <div className="mb-4 mt-5">
+                                    <div className="aspect-video w-full">
+                                      <iframe
+                                        src={`https://www.youtube.com/embed/${resource.video}${resource.playlist ? `?list=${resource.playlist}` : ''}?rel=0`}
+                                        className="w-full h-full rounded-lg"
+                                        title="YouTube video player"
+                                        allowFullScreen
+                                      />
+                                    </div>
+                                  </div>
+                                )}
+                                {resource.type === 'lecture' && resource.slides && (
+                                  <div className="">
+                                    <div className="aspect-video w-full">
+                                      <iframe
+                                        src={`https://docs.google.com/presentation/d/${resource.slides}/embed`}
+                                        className="w-full h-full rounded-lg"
+                                        allowFullScreen
+                                      />
+                                    </div>
+                                  </div>
+                                )}
+                                {resource.type === 'markdown' && resource.content && (
+                                  <div className="prose prose-sm dark:prose-invert max-w-none">
+                                    <Markdown>{resource.content}</Markdown>
+                                  </div>
+                                )}
+                              </motion.div>
+                            </CardContent>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </Card>
+                  )
+                })}
+              </div>
+            </div>
           )}
 
           <div className="mt-12">
