@@ -42,7 +42,8 @@ export const matrixTheme: ThemeDefinition = {
     sidebarAccent: '#00dd33',
     sidebarAccentForeground: '#ffffff',
     sidebarBorder: 'rgba(0,170,34,.15)',
-    sidebarRing: '#00aa22'
+    sidebarRing: '#00aa22',
+    serviceBg: '#fafcfa'
   },
   dark: {
     background: '#000a00',    // pure dark with tiny green tint
@@ -76,6 +77,7 @@ export const matrixTheme: ThemeDefinition = {
     sidebarAccent: '#39ff72',
     sidebarAccentForeground: '#000a00',
     sidebarBorder: 'rgba(0,255,65,.1)',
-    sidebarRing: '#00ff41'
+    sidebarRing: '#00ff41',
+    serviceBg: '#000a00'
   }
 }

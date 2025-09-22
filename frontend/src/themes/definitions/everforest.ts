@@ -42,7 +42,8 @@ export const everforestTheme: ThemeDefinition = {
     sidebarAccent: '#3a94c5',
     sidebarAccentForeground: '#fdf6e3',
     sidebarBorder: '#e0dcc7',  // bg4
-    sidebarRing: '#8da101'
+    sidebarRing: '#8da101',
+    serviceBg: '#fdf6e3'
   },
   dark: {
     background: '#2d353b',  // bg0
@@ -76,6 +77,7 @@ export const everforestTheme: ThemeDefinition = {
     sidebarAccent: '#7fbbb3',
     sidebarAccentForeground: '#2d353b',
     sidebarBorder: '#4f585e',  // bg4
-    sidebarRing: '#a7c080'
+    sidebarRing: '#a7c080',
+    serviceBg: '#232A2E'
   }
 }

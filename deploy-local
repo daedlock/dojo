@@ -27,15 +27,17 @@ while getopts "wh" opt; do
 done
 
 if [ "$REBUILD_WORKSPACE" = true ]; then
-    echo "Rebuilding workspace: removing workspace data..."
-    sleep 10
+    echo "Rebuilding workspace"
+    sleep 8
     # Build workspace with new dojo
-    docker exec dojo bash -c "export DOJO_WORKSPACE=core && docker compose --profile workspace up workspace-builder --force-recreate"
+    docker exec dojo bash -c "export DOJO_WORKSPACE=core && dojo compose --profile workspace up workspace-builder --force-recreate"
 
     # Restart any user containers
     docker exec dojo docker ps -q --filter "name=user_" | xargs -r docker exec dojo docker restart
 fi
 
+
+docker build -t pwncollege/dojo .
 docker stop dojo
 docker rm dojo
 docker run \
@@ -48,5 +50,6 @@ docker run \
     -p 80:80 \
     -p 443:443 \
     -e INTERNET_FOR_ALL=True \
+    -e CORS_ORIGINS="http://localhost:5173" \
     -d \
     pwncollege/dojo

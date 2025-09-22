@@ -36,6 +36,9 @@ interface ThemeColors {
   sidebarAccentForeground: string
   sidebarBorder: string
   sidebarRing: string
+
+  // Service container
+  serviceBg: string
 }
 
 interface ThemeDefinition {

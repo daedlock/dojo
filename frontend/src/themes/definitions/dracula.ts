@@ -42,7 +42,8 @@ export const draculaTheme: ThemeDefinition = {
     sidebarAccent: '#50fa7b',
     sidebarAccentForeground: '#282a36',
     sidebarBorder: 'rgba(0,0,0,.1)',
-    sidebarRing: '#6272a4'
+    sidebarRing: '#6272a4',
+    serviceBg: '#f8f8f2'
   },
   dark: {
     background: '#282a36',    // dracula background
@@ -76,6 +77,7 @@ export const draculaTheme: ThemeDefinition = {
     sidebarAccent: '#8be9fd',
     sidebarAccentForeground: '#282a36',
     sidebarBorder: 'rgba(255,255,255,.1)',
-    sidebarRing: '#bd93f9'
+    sidebarRing: '#bd93f9',
+    serviceBg: '#282a36'
   }
 }

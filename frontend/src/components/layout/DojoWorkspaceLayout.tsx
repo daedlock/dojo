@@ -34,6 +34,7 @@ export function DojoWorkspaceLayout({
 }: DojoWorkspaceLayoutProps) {
   // Use workspace state from Zustand store with individual selectors to avoid infinite loops
   const activeService = useUIStore(state => state.workspaceState.activeService)
+  const preferredService = useUIStore(state => state.workspaceState.preferredService)
   const sidebarCollapsed = useUIStore(state => state.workspaceState.sidebarCollapsed)
   const isFullScreen = useUIStore(state => state.workspaceState.isFullScreen)
   const sidebarWidth = useUIStore(state => state.workspaceState.sidebarWidth)
@@ -51,8 +52,8 @@ export function DojoWorkspaceLayout({
   const startChallengeMutation = useStartChallenge()
   const { palette } = useTheme()
 
-  // Pass just the theme name for terminal
-  const terminalTheme = activeService === 'terminal' ? palette : undefined
+  // Pass theme name for terminal and code services
+  const serviceTheme = (activeService === 'terminal' || activeService === 'code') ? palette : undefined
 
   // Single workspace call that gets status and data in one request
   // Only enable when we have an active challenge AND it's not currently starting
@@ -61,7 +62,7 @@ export function DojoWorkspaceLayout({
     {
       service: activeService,
       challenge: `${activeChallenge.dojoId}-${activeChallenge.moduleId}-${activeChallenge.challengeId}`,
-      theme: terminalTheme
+      theme: serviceTheme
     },
     !!activeChallenge
   )
@@ -148,13 +149,13 @@ export function DojoWorkspaceLayout({
     [hotkey.ctrl('3')]: () => workspaceData?.active && setActiveService('desktop'),
   }, [isFullScreen, workspaceData?.active])
 
-  // Auto-expand module and reset service
+  // Auto-expand module and use preferred service
   useEffect(() => {
     if (activeChallenge) {
-      setActiveService('terminal')
+      setActiveService(preferredService)
       // Don't auto-hide workspace header anymore since we want it visible by default
     }
-  }, [activeChallenge.challengeId])
+  }, [activeChallenge.challengeId, preferredService, setActiveService])
 
   // Full screen mode
   if (isFullScreen) {

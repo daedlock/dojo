@@ -10,6 +10,7 @@ interface UIStore {
     sidebarWidth: number
     isFullScreen: boolean
     activeService: string
+    preferredService: string
     commandPaletteOpen: boolean
     workspaceHeaderHidden: boolean
   }
@@ -41,11 +42,21 @@ interface UIStore {
   fetchActiveChallenge: () => Promise<void>
 }
 
+// Load preferred service from localStorage
+const getPreferredService = (): string => {
+  try {
+    return localStorage.getItem('dojo-preferred-service') || 'terminal'
+  } catch {
+    return 'terminal'
+  }
+}
+
 const defaultWorkspaceState = {
   sidebarCollapsed: false,
   sidebarWidth: 300,
   isFullScreen: false,
-  activeService: 'code',
+  activeService: getPreferredService(),
+  preferredService: getPreferredService(),
   commandPaletteOpen: false,
   workspaceHeaderHidden: false
 }
@@ -75,10 +86,22 @@ export const useUIStore = create<UIStore>((set) => ({
       workspaceState: { ...state.workspaceState, isFullScreen: fullScreen }
     })),
 
-  setActiveService: (service) =>
+  setActiveService: (service) => {
+    // Save preference to localStorage
+    try {
+      localStorage.setItem('dojo-preferred-service', service)
+    } catch (error) {
+      console.warn('Failed to save service preference:', error)
+    }
+
     set(state => ({
-      workspaceState: { ...state.workspaceState, activeService: service }
-    })),
+      workspaceState: {
+        ...state.workspaceState,
+        activeService: service,
+        preferredService: service
+      }
+    }))
+  },
 
   setCommandPaletteOpen: (open) =>
     set(state => ({

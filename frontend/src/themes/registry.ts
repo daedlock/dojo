@@ -73,6 +73,7 @@ export function themeColorsToCSSVars(colors: any): Record<string, string> {
     '--sidebar-accent': colors.sidebarAccent,
     '--sidebar-accent-foreground': colors.sidebarAccentForeground,
     '--sidebar-border': colors.sidebarBorder,
-    '--sidebar-ring': colors.sidebarRing
+    '--sidebar-ring': colors.sidebarRing,
+    '--service-bg': colors.serviceBg || colors.background
   }
 }

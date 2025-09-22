@@ -42,7 +42,8 @@ export const gruvboxTheme: ThemeDefinition = {
     sidebarAccent: '#458588',
     sidebarAccentForeground: '#fbf1c7',
     sidebarBorder: '#bdae93',  // light3
-    sidebarRing: '#98971a'
+    sidebarRing: '#98971a',
+    serviceBg: '#fbf1c7'
   },
   dark: {
     background: '#282828',  // dark0
@@ -76,6 +77,7 @@ export const gruvboxTheme: ThemeDefinition = {
     sidebarAccent: '#83a598',
     sidebarAccentForeground: '#282828',
     sidebarBorder: '#665c54',  // dark3
-    sidebarRing: '#b8bb26'
+    sidebarRing: '#b8bb26',
+    serviceBg: '#191B1B'
   }
 }

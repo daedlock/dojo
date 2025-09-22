@@ -63,9 +63,12 @@ export function WorkspaceService({ iframeSrc, activeService, onReady }: Workspac
           }
 
           setIsLoading(false)
-          setIsReady(true)
-          setError(null)
-          onReady?.()
+          // Add small delay to ensure iframe content is rendered before hiding spinner
+          setTimeout(() => {
+            setIsReady(true)
+            setError(null)
+            onReady?.()
+          }, 100)
 
           if (checkIntervalRef.current) {
             clearInterval(checkIntervalRef.current)
@@ -87,9 +90,12 @@ export function WorkspaceService({ iframeSrc, activeService, onReady }: Workspac
           }
 
           setIsLoading(false)
-          setIsReady(true)
-          setError(null)
-          onReady?.()
+          // Add small delay to ensure iframe content is rendered before hiding spinner
+          setTimeout(() => {
+            setIsReady(true)
+            setError(null)
+            onReady?.()
+          }, 100)
 
           if (checkIntervalRef.current) {
             clearInterval(checkIntervalRef.current)
@@ -112,13 +118,17 @@ export function WorkspaceService({ iframeSrc, activeService, onReady }: Workspac
   }, [iframeSrc, activeService, onReady])
 
   return (
-    <div className="relative w-full h-full">
+    <div
+      className="relative w-full h-full"
+      style={{ backgroundColor: activeService === 'terminal' ? 'var(--service-bg)' : 'var(--background)' }}
+    >
       {/* Always show iframe, but hide it when not ready */}
       <iframe
         ref={iframeRef}
-        className={`w-full h-full border-0 rounded-lg transition-opacity duration-300 ${
-          isReady ? 'opacity-100' : 'opacity-0 pointer-events-none'
-        }`}
+        className={`w-full h-full border-0 transition-opacity duration-300 ${
+          activeService === 'code' ? '' : 'rounded-lg'
+        } ${isReady ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+        style={{ backgroundColor: activeService === 'terminal' ? 'var(--service-bg)' : 'var(--background)' }}
         title={`Workspace ${activeService}`}
         allow="clipboard-write"
       />
@@ -126,7 +136,8 @@ export function WorkspaceService({ iframeSrc, activeService, onReady }: Workspac
       {/* Loading overlay when not ready */}
       {!isReady && (
         <motion.div
-          className="absolute inset-0 flex items-center justify-center bg-background"
+          className="absolute inset-0 flex items-center justify-center"
+          style={{ backgroundColor: activeService === 'terminal' ? 'var(--service-bg)' : 'var(--background)' }}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}

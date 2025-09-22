@@ -17,11 +17,11 @@ def start_on_demand_service(user, service_name, theme_data=None):
     try:
         # Prepare environment variables for theme data
         env_vars = {}
-        if service_name == "terminal" and theme_data:
+        if service_name in ["terminal", "code"] and theme_data:
             env_vars["TERMINAL_THEME_NAME"] = theme_data
-            print(f"[WORKSPACE] Setting TERMINAL_THEME_NAME={theme_data}")
-        elif service_name == "terminal":
-            print(f"[WORKSPACE] No theme data provided, using default")
+            print(f"[WORKSPACE] Setting TERMINAL_THEME_NAME={theme_data} for {service_name}")
+        elif service_name in ["terminal", "code"]:
+            print(f"[WORKSPACE] No theme data provided for {service_name}, using default")
 
         exec_run(
             f"/run/current-system/sw/bin/timeout -k 10 30 /run/current-system/sw/bin/dojo-{service_name}",

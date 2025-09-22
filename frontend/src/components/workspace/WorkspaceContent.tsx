@@ -22,7 +22,10 @@ export function WorkspaceContent({
   }, [activeService])
   return (
     <motion.div
-      className="flex-1 p-4"
+      className={`flex-1 ${activeService === 'terminal' ? 'p-4' : ''}`}
+      style={{
+        backgroundColor: activeService === 'terminal' ? 'var(--service-bg)' : undefined
+      }}
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{
@@ -32,7 +35,7 @@ export function WorkspaceContent({
       }}
     >
       {isStarting ? (
-        <div className="flex items-center justify-center h-full text-muted-foreground">
+        <div className="flex items-center justify-center h-full text-muted-foreground" style={{ backgroundColor: activeService === 'terminal' ? 'var(--service-bg)' : undefined }}>
           <div className="text-center">
             <div className="w-16 h-16 border-4 border-muted border-t-primary rounded-full animate-spin mx-auto mb-4" />
             <p>Starting challenge...</p>
@@ -46,7 +49,7 @@ export function WorkspaceContent({
           onReady={handleReady}
         />
       ) : (
-        <div className="flex items-center justify-center h-full text-muted-foreground">
+        <div className="flex items-center justify-center h-full text-muted-foreground" style={{ backgroundColor: activeService === 'terminal' ? 'var(--service-bg)' : undefined }}>
           <div className="text-center">
             <div className="w-16 h-16 border-4 border-muted border-t-primary rounded-full animate-spin mx-auto mb-4" />
             <p>Preparing your workspace...</p>

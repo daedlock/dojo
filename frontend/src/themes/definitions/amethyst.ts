@@ -42,7 +42,8 @@ export const amethystTheme: ThemeDefinition = {
     sidebarAccent: '#e879f9',
     sidebarAccentForeground: '#1f2937',
     sidebarBorder: '#e2e8f0',
-    sidebarRing: '#a855f7'
+    sidebarRing: '#a855f7',
+    serviceBg: '#ffffff'
   },
   dark: {
     background: '#111827',
@@ -76,6 +77,7 @@ export const amethystTheme: ThemeDefinition = {
     sidebarAccent: '#e879f9',
     sidebarAccentForeground: '#111827',
     sidebarBorder: '#334155',
-    sidebarRing: '#c084fc'
+    sidebarRing: '#c084fc',
+    serviceBg: '#111827'
   }
 }

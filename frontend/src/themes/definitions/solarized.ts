@@ -42,7 +42,8 @@ export const solarizedTheme: ThemeDefinition = {
     sidebarAccent: '#859900',
     sidebarAccentForeground: '#fdf6e3',
     sidebarBorder: '#d3d7d7',
-    sidebarRing: '#268bd2'
+    sidebarRing: '#268bd2',
+    serviceBg: '#fdf6e3'
   },
   dark: {
     background: '#002b36',    // base03
@@ -76,6 +77,7 @@ export const solarizedTheme: ThemeDefinition = {
     sidebarAccent: '#859900',
     sidebarAccentForeground: '#002b36',
     sidebarBorder: 'rgba(255,255,255,.1)',        // lighter version of base01
-    sidebarRing: '#268bd2'
+    sidebarRing: '#268bd2',
+    serviceBg: '#002b36'
   }
 }
