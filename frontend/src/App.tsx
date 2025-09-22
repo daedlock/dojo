@@ -12,6 +12,7 @@ import ModuleDetail from '@/pages/ModuleDetail'
 import WorkspacePage from '@/pages/WorkspacePage'
 import LeaderboardPage from '@/pages/LeaderboardPage'
 import CommunityPage from '@/pages/CommunityPage'
+import MarkdownTest from '@/pages/MarkdownTest'
 import { ClerkLoginForm, ClerkSignupForm, ForgotPasswordForm } from '@/components/auth'
 
 function App() {
@@ -33,6 +34,7 @@ function App() {
             <Route path="/dojo/:dojoId/module/:moduleId/challenge/:challengeId" element={<WorkspacePage />} />
             <Route path="/leaderboard" element={<Layout><LeaderboardPage /></Layout>} />
             <Route path="/community" element={<Layout><CommunityPage /></Layout>} />
+            <Route path="/test-markdown" element={<Layout><MarkdownTest /></Layout>} />
 
             {/* Authentication Routes - without Layout (they have their own full-screen design) */}
             <Route path="/login" element={<ClerkLoginForm />} />

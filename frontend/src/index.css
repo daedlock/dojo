@@ -388,11 +388,11 @@
   }
 
   .prose pre {
-    @apply bg-muted text-foreground border border-border rounded-lg p-4 overflow-x-auto;
+    @apply bg-card text-foreground border border-border rounded-lg p-3 overflow-x-auto;
   }
 
   .prose pre code {
-    @apply bg-transparent p-0 text-sm;
+    @apply bg-transparent p-0 text-sm font-mono;
   }
 
   .prose kbd {
@@ -545,110 +545,150 @@
   }
 }
 
-/* Theme-aware syntax highlighting */
+/* Theme-aware syntax highlighting with highlight.js */
 @layer components {
-  /* Base code styling */
-  .hljs {
-    background-color: hsl(var(--muted));
-    color: hsl(var(--foreground));
+  /* Ensure our syntax highlighting has higher specificity than prose */
+  /* Base code block styling */
+  .prose .hljs,
+  .prose pre {
+    background-color: var(--muted) !important;
+    color: var(--foreground) !important;
+    border-radius: 0.5rem;
+    font-family: var(--font-mono);
+    border: 1px solid var(--border);
   }
 
-  /* Keywords, operators */
-  .hljs-keyword,
-  .hljs-operator,
-  .hljs-pattern-match {
-    color: hsl(var(--primary));
+  /* Keywords, control flow, operators */
+  .prose .hljs-keyword,
+  .prose .hljs-operator,
+  .prose .hljs-selector-tag,
+  .prose .hljs-literal {
+    color: var(--primary) !important;
     font-weight: 600;
   }
 
-  /* Built-in types and functions */
-  .hljs-built_in,
-  .hljs-builtin-name,
-  .hljs-type {
-    color: hsl(var(--accent));
+  /* Built-in functions, types, classes */
+  .prose .hljs-built_in,
+  .prose .hljs-builtin-name,
+  .prose .hljs-type,
+  .prose .hljs-class,
+  .prose .hljs-title.class_,
+  .prose .hljs-title.class,
+  .prose .hljs-selector-class {
+    color: var(--chart-5) !important;
+    font-weight: 500;
   }
 
-  /* Strings */
-  .hljs-string,
-  .hljs-regexp {
-    color: hsl(var(--chart-3));
+  /* Strings, template literals, regular expressions */
+  .prose .hljs-string,
+  .prose .hljs-regexp,
+  .prose .hljs-char,
+  .prose .hljs-template-literal {
+    color: var(--chart-3) !important;
   }
 
-  /* Numbers */
-  .hljs-number,
-  .hljs-literal {
-    color: hsl(var(--destructive));
+  /* Numbers, constants, booleans */
+  .prose .hljs-number,
+  .prose .hljs-boolean {
+    color: var(--chart-4) !important;
   }
 
   /* Comments */
-  .hljs-comment,
-  .hljs-quote {
-    color: hsl(var(--muted-foreground));
+  .prose .hljs-comment,
+  .prose .hljs-quote {
+    color: var(--muted-foreground) !important;
     font-style: italic;
+    opacity: 0.8;
   }
 
   /* Functions and methods */
-  .hljs-function,
-  .hljs-title.function_,
-  .hljs-title.function {
-    color: hsl(var(--chart-5));
+  .prose .hljs-function,
+  .prose .hljs-title.function_,
+  .prose .hljs-title.function,
+  .prose .hljs-method {
+    color: var(--chart-5) !important;
+    font-weight: 500;
   }
 
-  /* Variables and parameters */
+  /* Variables, parameters, properties */
   .hljs-variable,
   .hljs-params,
-  .hljs-attr {
-    color: hsl(var(--foreground));
+  .hljs-property,
+  .hljs-symbol {
+    color: var(--foreground);
   }
 
-  /* Class names */
-  .hljs-title.class_,
-  .hljs-title.class,
-  .hljs-selector-class {
-    color: hsl(var(--chart-2));
-  }
-
-  /* Tags (HTML/XML) */
-  .hljs-tag,
-  .hljs-name,
-  .hljs-selector-tag {
-    color: hsl(var(--primary));
-  }
-
-  /* Attributes */
+  /* Attributes, selectors */
   .hljs-attribute,
   .hljs-selector-attr,
-  .hljs-selector-pseudo {
-    color: hsl(var(--accent));
+  .hljs-selector-pseudo,
+  .hljs-attr {
+    color: var(--accent);
   }
 
-  /* Meta information */
+  /* HTML/XML tags */
+  .hljs-tag,
+  .hljs-name {
+    color: var(--primary);
+  }
+
+  /* Meta information, preprocessor directives */
   .hljs-meta,
   .hljs-meta-keyword,
   .hljs-doctag {
-    color: hsl(var(--chart-4));
+    color: var(--chart-4);
   }
 
-  /* Additions in diffs */
+  /* Assembly language specific classes */
+  .hljs-title {
+    color: var(--chart-2);
+    font-weight: 600;
+  }
+
+  /* Diff additions */
   .hljs-addition {
-    color: hsl(var(--chart-3));
-    background-color: hsl(var(--chart-3) / 0.1);
+    color: var(--chart-3);
+    background-color: color-mix(in srgb, var(--chart-3) 10%, transparent);
   }
 
-  /* Deletions in diffs */
+  /* Diff deletions */
   .hljs-deletion {
-    color: hsl(var(--destructive));
-    background-color: hsl(var(--destructive) / 0.1);
+    color: var(--destructive);
+    background-color: color-mix(in srgb, var(--destructive) 10%, transparent);
   }
 
-  /* Important, bold text */
+  /* Language-specific enhancements */
+
+  /* JavaScript/TypeScript */
+  .hljs-subst {
+    color: var(--foreground);
+  }
+
+  /* CSS */
+  .hljs-selector-id {
+    color: var(--chart-1);
+    font-weight: 600;
+  }
+
+  /* Shell/Bash */
+  .hljs-variable.hljs-language_ {
+    color: var(--accent);
+  }
+
+  /* Python */
+  .hljs-decorator {
+    color: var(--chart-4);
+  }
+
+  /* Important, emphasis */
   .hljs-strong {
     font-weight: 700;
+    color: var(--foreground);
   }
 
-  /* Emphasis, italic text */
   .hljs-emphasis {
     font-style: italic;
+    color: var(--foreground);
   }
 
 }
@@ -658,6 +698,27 @@
   .prose code::before,
   .prose code::after {
     content: none !important; /* remove the fake backticks */
+  }
+
+  /* Inline code styling (not in pre blocks) */
+  .prose code:not(pre code) {
+    background-color: var(--muted) !important;
+    color: var(--foreground) !important;
+    padding: 0.125rem 0.375rem;
+    border-radius: 0.25rem;
+    font-family: var(--font-mono);
+    font-size: 0.875em;
+    border: 1px solid var(--border);
+  }
+
+  /* Strong/bold text styling */
+  .prose strong {
+    color: var(--foreground) !important;
+  }
+
+  /* Horizontal rule styling */
+  .prose hr {
+    border-color: var(--border) !important;
   }
 
   .prose td { padding-left: 8px;}

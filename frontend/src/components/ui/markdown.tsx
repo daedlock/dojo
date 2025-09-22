@@ -15,6 +15,7 @@ export function Markdown({ children, className }: MarkdownProps) {
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         rehypePlugins={[rehypeHighlight, rehypeRaw]}
+
       >
         {children}
       </ReactMarkdown>
