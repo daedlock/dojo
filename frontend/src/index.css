@@ -717,8 +717,11 @@
   }
 
   /* Horizontal rule styling */
-  .prose hr {
+  .prose hr,
+  .prose-sm hr {
     border-color: var(--border) !important;
+    margin-top: 1.4rem !important;
+    margin-bottom: 1.4rem !important;
   }
 
   .prose td { padding-left: 8px;}
