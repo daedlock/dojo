@@ -96,24 +96,8 @@ export function WorkspaceSidebar({
 }: WorkspaceSidebarProps) {
   return (
     <div
-      className={cn(
-        "border-r bg-background flex flex-col h-full relative transition-all duration-300",
-        sidebarCollapsed ? "w-12" : "",
-        !isResizing ? "transition-all duration-300" : ""
-      )}
-      style={{ width: sidebarCollapsed ? '48px' : `${sidebarWidth}px` }}
+      className="bg-background flex flex-col h-full w-full"
     >
-      {/* Resize Handle */}
-      {!sidebarCollapsed && (
-        <div
-          className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-primary/20 transition-colors group"
-          onMouseDown={onResizeStart}
-        >
-          <div className="opacity-0 group-hover:opacity-100 transition-opacity bg-muted-foreground/20 rounded-sm px-0.5 py-8">
-            <GripVertical className="h-4 w-4 text-muted-foreground" />
-          </div>
-        </div>
-      )}
 
       {/* Header */}
       <div className="border-b px-6 py-3 animate-in fade-in slide-in-from-top-2 duration-300 delay-100">

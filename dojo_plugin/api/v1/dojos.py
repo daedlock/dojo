@@ -125,6 +125,18 @@ class DojoModuleList(Resource):
             dict(id=module.id,
                  name=module.name,
                  description=module.description,
+                 resources=[
+                    dict(id=f"resource-{resource.resource_index}",
+                         name=resource.name,
+                         type=resource.type,
+                         content=getattr(resource, 'content', None) if resource.type == "markdown" else None,
+                         video=getattr(resource, 'video', None) if resource.type == "lecture" else None,
+                         playlist=getattr(resource, 'playlist', None) if resource.type == "lecture" else None,
+                         slides=getattr(resource, 'slides', None) if resource.type == "lecture" else None,
+                         expandable=getattr(resource, 'expandable', True))
+                    for resource in module.resources
+                    if resource.visible or is_dojo_admin
+                 ],
                  challenges=[
                     dict(id=challenge.id,
                          name=challenge.name,

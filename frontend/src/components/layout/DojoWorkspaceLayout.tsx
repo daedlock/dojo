@@ -4,6 +4,7 @@ import { useStartChallenge } from '@/hooks/useDojo'
 import { FullScreenWorkspace } from './FullScreenWorkspace'
 import { useUIStore } from '@/stores'
 import { CommandPalette } from '@/components/ui/command-palette'
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable'
 import { useCommands } from '@/hooks/useCommands'
 import { useHotkeys, hotkey } from '@/hooks/useHotkeys'
 import { WorkspaceSidebar } from '@/components/workspace/WorkspaceSidebar'
@@ -60,7 +61,6 @@ export function DojoWorkspaceLayout({
   const setCommandPaletteOpen = useUIStore(state => state.setCommandPaletteOpen)
   const setWorkspaceHeaderHidden = useUIStore(state => state.setWorkspaceHeaderHidden)
 
-  const [isResizing, setIsResizing] = useState(false)
   const [activeResourceTab, setActiveResourceTab] = useState<string>("video")
   const startChallengeMutation = useStartChallenge()
   const { palette } = useTheme()
@@ -83,6 +83,104 @@ export function DojoWorkspaceLayout({
   // Get the current module (we only have one in workspace view)
   const currentModule = modules[0]
 
+  // Cached Canvas for text measurement (create once, reuse)
+  const getTextMeasureCanvas = (() => {
+    let canvas: HTMLCanvasElement | null = null
+    let context: CanvasRenderingContext2D | null = null
+
+    return () => {
+      if (!canvas || !context) {
+        canvas = document.createElement('canvas')
+        context = canvas.getContext('2d')
+        if (context) {
+          context.font = '500 14px Inter, system-ui, sans-serif'
+        }
+      }
+      return context
+    }
+  })()
+
+  // Calculate optimal sidebar width based on actual text rendering requirements
+  const calculateOptimalSidebarWidth = () => {
+    if (!currentModule) {
+      console.log('No current module, using default width: 25')
+      return 25 // Default fallback
+    }
+
+    const allTexts: string[] = []
+
+    // Add challenge titles
+    if (currentModule.challenges) {
+      currentModule.challenges.forEach(challenge => {
+        if (challenge.name) allTexts.push(challenge.name)
+      })
+    }
+
+    // Add learning material titles
+    if (currentModule.resources) {
+      currentModule.resources.forEach(resource => {
+        if (resource.name) allTexts.push(resource.name)
+      })
+    }
+
+    // Add module name and dojo name
+    if (currentModule.name) allTexts.push(currentModule.name)
+    if (dojo.name) allTexts.push(dojo.name)
+
+    // If no texts found, use default
+    if (allTexts.length === 0) {
+      console.log('No content found, using default width: 25')
+      return 25
+    }
+
+    // Find the longest text
+    const longestText = allTexts.reduce((a, b) => a.length > b.length ? a : b)
+
+    // Measure actual text width using cached Canvas (optimal performance)
+    const measureTextWidth = (text: string): number => {
+      const context = getTextMeasureCanvas()
+      if (context) {
+        return Math.ceil(context.measureText(text).width) + 2 // +2px safety margin
+      } else {
+        // Fallback to character estimation if Canvas fails
+        console.warn('Canvas context not available, using fallback')
+        return text.length * 8.5 // Approximate Inter font width
+      }
+    }
+
+    const textWidth = measureTextWidth(longestText)
+
+    // Account for UI components around the text
+    const padding = 48 // px-6 = 24px each side
+    const margins = 24 // gaps and spacing
+    const iconsBadges = 60 // info badges and icons
+    const controls = 84 // header control buttons
+
+    const totalRequiredWidth = textWidth + padding + margins + iconsBadges + controls
+
+    // Convert to percentage of screen width (assuming 1920px base)
+    const screenWidth = window?.innerWidth || 1920
+    const requiredPercentage = (totalRequiredWidth / screenWidth) * 100
+
+    // Apply limits: minimum 20%, maximum 50%
+    const calculatedWidth = Math.min(Math.max(requiredPercentage, 20), 50)
+
+    console.log('Sidebar width calculation:', {
+      longestText,
+      textLength: longestText.length,
+      measuredTextWidth: Math.round(textWidth),
+      totalRequiredWidth: Math.round(totalRequiredWidth),
+      screenWidth,
+      requiredPercentage: Math.round(requiredPercentage * 10) / 10,
+      calculatedWidth: Math.round(calculatedWidth * 10) / 10,
+      totalTexts: allTexts.length
+    })
+
+    return Math.round(calculatedWidth * 10) / 10 // Round to 1 decimal
+  }
+
+  const optimalSidebarWidth = calculateOptimalSidebarWidth()
+
   const handleChallengeStart = async (moduleId: string, challengeId: string) => {
     // 1. Navigate immediately for instant UX
     onChallengeStart(dojo.id, moduleId, challengeId)
@@ -101,36 +199,6 @@ export function DojoWorkspaceLayout({
     }
   }
 
-  const handleResizeStart = (e: React.MouseEvent) => {
-    e.preventDefault()
-    setIsResizing(true)
-
-    const containerRect = e.currentTarget.parentElement?.getBoundingClientRect()
-    const sidebarElement = e.currentTarget.parentElement as HTMLDivElement
-
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!containerRect) return
-      const newWidth = Math.max(320, Math.min(600, e.clientX - containerRect.left))
-      sidebarElement.style.width = `${newWidth}px`
-    }
-
-    const handleMouseUp = (e: MouseEvent) => {
-      if (!containerRect) return
-      document.removeEventListener('mousemove', handleMouseMove)
-      document.removeEventListener('mouseup', handleMouseUp)
-      document.body.style.cursor = ''
-      document.body.style.userSelect = ''
-
-      const finalWidth = Math.max(320, Math.min(600, e.clientX - containerRect.left))
-      setSidebarWidth(finalWidth)
-      setIsResizing(false)
-    }
-
-    document.addEventListener('mousemove', handleMouseMove)
-    document.addEventListener('mouseup', handleMouseUp)
-    document.body.style.cursor = 'col-resize'
-    document.body.style.userSelect = 'none'
-  }
 
   const commands = useCommands({
     activeChallenge,
@@ -183,70 +251,90 @@ export function DojoWorkspaceLayout({
   }
 
   return (
-    <div className="flex h-screen">
-      {/* Sidebar */}
-      <WorkspaceSidebar
-        module={currentModule ? { ...currentModule, challenges: currentModule.challenges.map(c => ({ ...c, id: c.id.toString() })) } : { id: '', name: 'Module', challenges: [] }}
-        dojoName={dojo.name}
-        activeChallenge={activeChallenge}
-        activeResource={activeResource?.id}
-        sidebarCollapsed={sidebarCollapsed}
-        sidebarWidth={sidebarWidth}
-        isResizing={isResizing}
-        headerHidden={workspaceHeaderHidden}
-        onSidebarCollapse={setSidebarCollapsed}
-        onHeaderToggle={setWorkspaceHeaderHidden}
-        onChallengeStart={handleChallengeStart}
-        onChallengeClose={onChallengeClose}
-        onResizeStart={handleResizeStart}
-        onResourceSelect={onResourceSelect}
-        isPending={startChallengeMutation.isPending}
-      />
-
-      {/* Main Workspace Area */}
-      <div className="flex-1 flex flex-col bg-background">
-        {/* Unified animated header for both challenges and resources */}
-        <AnimatedWorkspaceHeader
-          activeChallenge={activeChallenge}
-          dojoName={dojo.name}
-          moduleName={currentModule?.name || 'Module'}
-          activeService={activeService}
-          workspaceActive={workspaceData?.active || false}
-          activeResource={activeResource}
-          activeResourceTab={activeResourceTab}
-          onResourceTabChange={setActiveResourceTab}
-          isFullScreen={isFullScreen}
-          headerHidden={workspaceHeaderHidden}
-          onServiceChange={setActiveService}
-          onFullScreenToggle={() => setFullScreen(!isFullScreen)}
-          onClose={onChallengeClose}
-          onResourceClose={() => {
-            if (onResourceSelect) {
-              onResourceSelect(null)
+    <div className="h-screen">
+      <ResizablePanelGroup direction="horizontal" className="h-full">
+        {/* Sidebar Panel */}
+        <ResizablePanel
+          defaultSize={sidebarCollapsed ? 3 : optimalSidebarWidth}
+          minSize={3}
+          maxSize={50}
+          className={sidebarCollapsed ? "max-w-[48px]" : "min-w-[200px]"}
+          onResize={(size) => {
+            if (sidebarCollapsed && size > 10) {
+              setSidebarCollapsed(false)
             }
           }}
+        >
+          <WorkspaceSidebar
+            module={currentModule ? { ...currentModule, challenges: currentModule.challenges.map(c => ({ ...c, id: c.id.toString() })) } : { id: '', name: 'Module', challenges: [] }}
+            dojoName={dojo.name}
+            activeChallenge={activeChallenge}
+            activeResource={activeResource?.id}
+            sidebarCollapsed={sidebarCollapsed}
+            isResizing={false}
+            headerHidden={workspaceHeaderHidden}
+            onSidebarCollapse={setSidebarCollapsed}
+            onHeaderToggle={setWorkspaceHeaderHidden}
+            onChallengeStart={handleChallengeStart}
+            onChallengeClose={onChallengeClose}
+            onResizeStart={() => {}}
+            onResourceSelect={onResourceSelect}
+            isPending={startChallengeMutation.isPending}
+          />
+        </ResizablePanel>
+
+        <ResizableHandle
+          withHandle
+          onDoubleClick={() => setSidebarCollapsed(!sidebarCollapsed)}
         />
 
-        <WorkspaceContent
-          workspaceActive={workspaceData?.active || false}
-          workspaceData={workspaceData}
-          activeService={activeService}
-          activeResource={activeResource}
-          activeResourceTab={activeResourceTab}
-          activeChallenge={activeChallenge}
-          dojoName={dojo.name}
-          moduleName={currentModule?.name || 'Module'}
-          isStarting={false}
-          onResourceClose={() => {
-            if (onResourceSelect) {
-              onResourceSelect(null)
-            }
-          }}
-          onChallengeClose={onChallengeClose}
-          onServiceChange={setActiveService}
-          onResourceTabChange={setActiveResourceTab}
-        />
-      </div>
+        {/* Main Workspace Panel */}
+        <ResizablePanel defaultSize={sidebarCollapsed ? 97 : (100 - optimalSidebarWidth)}>
+          <div className="flex flex-col h-full bg-background">
+            {/* Unified animated header for both challenges and resources */}
+            <AnimatedWorkspaceHeader
+              activeChallenge={activeChallenge}
+              dojoName={dojo.name}
+              moduleName={currentModule?.name || 'Module'}
+              activeService={activeService}
+              workspaceActive={workspaceData?.active || false}
+              activeResource={activeResource}
+              activeResourceTab={activeResourceTab}
+              onResourceTabChange={setActiveResourceTab}
+              isFullScreen={isFullScreen}
+              headerHidden={workspaceHeaderHidden}
+              onServiceChange={setActiveService}
+              onFullScreenToggle={() => setFullScreen(!isFullScreen)}
+              onClose={onChallengeClose}
+              onResourceClose={() => {
+                if (onResourceSelect) {
+                  onResourceSelect(null)
+                }
+              }}
+            />
+
+            <WorkspaceContent
+              workspaceActive={workspaceData?.active || false}
+              workspaceData={workspaceData}
+              activeService={activeService}
+              activeResource={activeResource}
+              activeResourceTab={activeResourceTab}
+              activeChallenge={activeChallenge}
+              dojoName={dojo.name}
+              moduleName={currentModule?.name || 'Module'}
+              isStarting={false}
+              onResourceClose={() => {
+                if (onResourceSelect) {
+                  onResourceSelect(null)
+                }
+              }}
+              onChallengeClose={onChallengeClose}
+              onServiceChange={setActiveService}
+              onResourceTabChange={setActiveResourceTab}
+            />
+          </div>
+        </ResizablePanel>
+      </ResizablePanelGroup>
 
       {/* Command Palette */}
       <CommandPalette
