@@ -1,13 +1,16 @@
 import { useState, useEffect, useRef } from 'react'
-import { Flag, Check, X, Loader2, Send } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Flag, Check, X, Loader2, Send, Clipboard, ChevronRight } from 'lucide-react'
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover'
+import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { useSubmitChallengeSolution } from '@/hooks/useDojo'
 import { useDojoStore } from '@/stores'
+import { useClipboardFlagSubmission } from '@/hooks/useClipboardFlagSubmission'
 
 interface SmartFlagInputProps {
   dojoId: string
@@ -25,16 +28,186 @@ export function SmartFlagInput({
   const [value, setValue] = useState('')
   const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle')
   const [message, setMessage] = useState('')
-  const [showFeedback, setShowFeedback] = useState(false)
+  const [clipboardFlag, setClipboardFlag] = useState<string>('')
+  const [dismissedFlags, setDismissedFlags] = useState<Set<string>>(new Set())
+  const [lastProcessedFlag, setLastProcessedFlag] = useState<string>('')
+  const [initialClipboardValue, setInitialClipboardValue] = useState<string>('')
+  const [isInitialized, setIsInitialized] = useState(false)
+  const [clipboardSubmissionResult, setClipboardSubmissionResult] = useState<'fresh_success' | 'already_solved' | 'error' | null>(null)
+  const [isClipboardSubmission, setIsClipboardSubmission] = useState(false)
+  const [showUnifiedPopup, setShowUnifiedPopup] = useState(false)
+  const [popupState, setPopupState] = useState<'clipboard_detection' | 'submission_result' | 'regular_feedback' | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const timeoutRef = useRef<NodeJS.Timeout>()
 
   const submitSolution = useSubmitChallengeSolution()
   const isSubmitting = submitSolution.isPending
   const addSolve = useDojoStore(state => state.addSolve)
 
+  // Helper function to safely show popup with state
+  const showPopupWithState = (state: 'clipboard_detection' | 'submission_result' | 'regular_feedback') => {
+    console.log('[Popup Helper] Setting state:', state)
+    setPopupState(state)
+    setShowUnifiedPopup(true)
+  }
+
+  // Helper function to safely hide popup
+  const hidePopup = () => {
+    console.log('[Popup Helper] Hiding popup')
+    setShowUnifiedPopup(false)
+    setPopupState(null)
+    // Clean up status and message when manually hiding
+    setStatus('idle')
+    setMessage('')
+  }
+
   // Flag pattern validation
   const flagPattern = /^pwn\.college\{[^}]+\}$/
   const isValidFlag = flagPattern.test(value)
+
+  // Animation variants for smooth transitions
+  const containerVariants = {
+    hidden: {
+      opacity: 0,
+      scale: 0.95,
+      y: -10
+    },
+    visible: {
+      opacity: 1,
+      scale: 1,
+      y: 0,
+      transition: {
+        type: "spring",
+        stiffness: 300,
+        damping: 30,
+        mass: 0.8,
+        staggerChildren: 0.1
+      }
+    },
+    exit: {
+      opacity: 0,
+      scale: 0.95,
+      y: -10,
+      transition: {
+        duration: 0.2,
+        ease: "easeInOut"
+      }
+    }
+  }
+
+  const itemVariants = {
+    hidden: { opacity: 0, x: -20 },
+    visible: {
+      opacity: 1,
+      x: 0,
+      transition: {
+        type: "spring",
+        stiffness: 400,
+        damping: 25
+      }
+    }
+  }
+
+  const buttonVariants = {
+    hidden: { opacity: 0, scale: 0.8 },
+    visible: {
+      opacity: 1,
+      scale: 1,
+      transition: {
+        type: "spring",
+        stiffness: 500,
+        damping: 30,
+        delay: 0.2
+      }
+    }
+  }
+
+  // Initialize clipboard baseline on mount
+  useEffect(() => {
+    const initializeClipboard = async () => {
+      try {
+        if (navigator.clipboard) {
+          const initialValue = await navigator.clipboard.readText()
+          setInitialClipboardValue(initialValue.trim())
+          console.log('[Clipboard Init] Initial clipboard value:', initialValue.trim())
+
+          // Reset state for fresh session
+          setDismissedFlags(new Set())
+          setLastProcessedFlag('')
+        }
+      } catch (error) {
+        console.log('[Clipboard Init] Could not read initial clipboard:', error)
+      } finally {
+        setIsInitialized(true)
+      }
+    }
+
+    initializeClipboard()
+  }, [])
+
+  // Simplified clipboard flag processing
+  const processClipboardFlag = (flag: string) => {
+    console.log('[Flag Processing] 🎯 Processing flag:', flag)
+    console.log('[Flag Processing] Current state:', {
+      value,
+      showUnifiedPopup,
+      popupState,
+      lastProcessedFlag,
+      isDismissed: dismissedFlags.has(flag),
+      initialClipboardValue,
+      isInitialized
+    })
+
+    // Basic checks
+    if (!flag.trim()) {
+      console.log('[Flag Processing] ❌ Skipping - empty flag')
+      return
+    }
+
+    if (flag === initialClipboardValue) {
+      console.log('[Flag Processing] ❌ Skipping - same as initial clipboard value')
+      return
+    }
+
+    if (showUnifiedPopup) {
+      console.log('[Flag Processing] ❌ Skipping - popup already showing')
+      return
+    }
+
+    console.log('[Flag Processing] ✅ Showing popup for NEW flag:', flag)
+
+    // Clear any existing timeout
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current)
+    }
+
+    // Set the new flag and show unified popup
+    setClipboardFlag(flag)
+    setLastProcessedFlag(flag)
+    showPopupWithState('clipboard_detection')
+
+    // Auto-hide after 15 seconds
+    timeoutRef.current = setTimeout(() => {
+      hidePopup()
+    }, 15000)
+  }
+
+  // Clipboard monitoring - only enabled after initialization
+  const { isMonitoring } = useClipboardFlagSubmission({
+    enabled: isInitialized,
+    onFlagDetected: processClipboardFlag,
+    shouldProcessFlag: (flag: string) => {
+      // Don't process if already dismissed or same as last processed
+      const shouldNotProcess = dismissedFlags.has(flag) || flag === lastProcessedFlag
+      console.log('[Flag Processing] shouldProcessFlag check:', {
+        flag: flag.substring(0, 30),
+        isDismissed: dismissedFlags.has(flag),
+        isLastProcessed: flag === lastProcessedFlag,
+        shouldNotProcess
+      })
+      return !shouldNotProcess
+    }
+  })
 
   const submitFlag = async (flag: string) => {
     if (!flag.trim() || isSubmitting) return
@@ -47,7 +220,6 @@ export function SmartFlagInput({
         const result = await onFlagSubmit(flag)
         setStatus(result.success ? 'success' : 'error')
         setMessage(result.message)
-        setShowFeedback(true)
 
         // Add solve to store if successful
         if (result.success) {
@@ -55,11 +227,7 @@ export function SmartFlagInput({
         }
 
         setValue('')
-        setTimeout(() => {
-          setShowFeedback(false)
-          setStatus('idle')
-          setMessage('')
-        }, 3000)
+        // Note: Status and message cleanup is now handled by unified popup
       } else {
         // Use real flag submission API
         const submissionData = {
@@ -85,22 +253,13 @@ export function SmartFlagInput({
             addSolve(dojoId, moduleId, challengeId)
           }
           setValue('')
-          setTimeout(() => {
-            setShowFeedback(false)
-            setStatus('idle')
-            setMessage('')
-          }, 3000)
+          // Note: Status and message cleanup is now handled by unified popup
         } else {
           setStatus('error')
           setMessage('Incorrect flag. Try again!')
           setValue('')
-          setTimeout(() => {
-            setShowFeedback(false)
-            setStatus('idle')
-            setMessage('')
-          }, 3000)
+          // Note: Status and message cleanup is now handled by unified popup
         }
-        setShowFeedback(true)
       }
     } catch (error: any) {
       setStatus('error')
@@ -113,13 +272,8 @@ export function SmartFlagInput({
       }
 
       setMessage(errorMessage)
-      setShowFeedback(true)
       setValue('')
-      setTimeout(() => {
-        setShowFeedback(false)
-        setStatus('idle')
-        setMessage('')
-      }, 3000)
+      // Note: Status and message cleanup is now handled by unified popup
     }
   }
 
@@ -135,6 +289,58 @@ export function SmartFlagInput({
     }
   }, [value, isValidFlag])
 
+  // Watch for submission results to show in unified popup
+  useEffect(() => {
+    if ((status === 'success' || status === 'error') && message) {
+      console.log('[Unified Popup] Showing result state:', status, 'isClipboardSubmission:', isClipboardSubmission)
+
+      // Determine the type of result based on status and message
+      if (status === 'success') {
+        if (message === 'Challenge already solved!') {
+          setClipboardSubmissionResult('already_solved')
+        } else {
+          setClipboardSubmissionResult('fresh_success')
+        }
+      } else if (status === 'error') {
+        setClipboardSubmissionResult('error')
+      }
+
+      // Show unified popup with result state
+      if (isClipboardSubmission && clipboardFlag) {
+        // This was a clipboard submission - show result in unified popup
+        showPopupWithState('submission_result')
+        setIsClipboardSubmission(false)
+      } else {
+        // Regular submission - show as regular feedback ONLY if we don't have clipboard popup open
+        if (popupState !== 'clipboard_detection') {
+          console.log('[Unified Popup] Setting regular_feedback state')
+          showPopupWithState('regular_feedback')
+        }
+      }
+
+      // Auto-hide result state after different delays based on type
+      let hideDelay = 5000
+      if (isClipboardSubmission && clipboardFlag) {
+        hideDelay = 5000 // Clipboard submissions stay longer
+      } else {
+        hideDelay = 3000 // Regular feedback auto-hides faster
+      }
+
+      const resultTimeout = setTimeout(() => {
+        hidePopup()
+        setClipboardSubmissionResult(null)
+        if (isClipboardSubmission) {
+          setClipboardFlag('')
+        }
+        // Clean up status and message after popup hides
+        setStatus('idle')
+        setMessage('')
+      }, hideDelay)
+
+      return () => clearTimeout(resultTimeout)
+    }
+  }, [status, message, isClipboardSubmission, clipboardFlag, popupState])
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     e.stopPropagation()
 
@@ -145,9 +351,67 @@ export function SmartFlagInput({
 
     if (e.key === 'Escape') {
       setValue('')
-      setShowFeedback(false)
     }
   }
+
+  const handleClipboardSubmit = () => {
+    const flagToSubmit = clipboardFlag
+    console.log('[Flag Handler] Submitting flag:', flagToSubmit)
+
+    // Clear timeout
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current)
+    }
+
+    setValue(flagToSubmit)
+    setLastProcessedFlag(flagToSubmit)
+
+    // Mark this as a clipboard submission
+    setIsClipboardSubmission(true)
+    submitFlag(flagToSubmit)
+  }
+
+
+  const handleClipboardDismiss = () => {
+    const flagToDismiss = clipboardFlag
+    console.log('[Flag Handler] Dismissing flag:', flagToDismiss)
+
+    // Clear timeout
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current)
+    }
+
+    // Add to dismissed flags to prevent re-showing
+    setDismissedFlags(prev => new Set([...prev, flagToDismiss]))
+    hidePopup()
+    setClipboardFlag('')
+    setClipboardSubmissionResult(null)
+    // DON'T clear lastProcessedFlag - keep it to track what we've processed
+    setLastProcessedFlag(flagToDismiss)
+  }
+
+  const handleNextChallenge = () => {
+    console.log('[Clipboard Success] Navigating to next challenge')
+    // Hide the popup
+    hidePopup()
+    setClipboardFlag('')
+    setClipboardSubmissionResult(null)
+
+    // TODO: Implement navigation to next challenge
+    // This would typically involve:
+    // - Getting the next challenge ID
+    // - Navigating to the next challenge route
+    window.alert('Next challenge navigation would be implemented here!')
+  }
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current)
+      }
+    }
+  }, [])
 
   const getStatusIcon = () => {
     if (isSubmitting) {
@@ -156,7 +420,7 @@ export function SmartFlagInput({
 
     switch (status) {
       case 'success':
-        return <Check className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+        return <Check className="h-4 w-4 text-primary" />
       case 'error':
         return <X className="h-4 w-4 text-destructive" />
       default:
@@ -170,14 +434,21 @@ export function SmartFlagInput({
 
   return (
     <div className="relative">
-      <Popover open={showFeedback && !!message} onOpenChange={setShowFeedback}>
+      <Popover
+        open={showUnifiedPopup && !!popupState}
+        onOpenChange={(open) => {
+          if (!open) {
+            hidePopup()
+          }
+        }}
+      >
         <PopoverTrigger asChild>
           <div className={cn(
             "relative flex items-center rounded-lg border h-9 px-3 gap-2 transition-all duration-200",
             {
               'border-muted-foreground/20 bg-muted/30 hover:bg-muted/50': status === 'idle' && !isValidFlag,
               'border-primary/50 bg-primary/5 hover:bg-primary/10': isValidFlag && status === 'idle',
-              'border-emerald-500/50 bg-emerald-50/50 dark:bg-emerald-950/30': status === 'success',
+              'border-primary/50 bg-primary/10': status === 'success',
               'border-destructive/50 bg-destructive/5': status === 'error',
             }
           )}>
@@ -186,7 +457,7 @@ export function SmartFlagInput({
               {
                 'text-muted-foreground': status === 'idle' && !isValidFlag,
                 'text-primary': isValidFlag && status === 'idle',
-                'text-emerald-600 dark:text-emerald-400': status === 'success',
+                'text-primary': status === 'success',
                 'text-destructive': status === 'error',
               }
             )} />
@@ -206,7 +477,7 @@ export function SmartFlagInput({
                 {
                   'text-foreground': status === 'idle',
                   'text-primary font-medium': isValidFlag && status === 'idle',
-                  'text-emerald-700 dark:text-emerald-400 font-medium': status === 'success',
+                  'text-primary font-medium': status === 'success',
                   'text-destructive font-medium': status === 'error',
                 }
               )}
@@ -220,21 +491,232 @@ export function SmartFlagInput({
           </div>
         </PopoverTrigger>
 
-        {message && (
-          <PopoverContent
-            side="bottom"
-            align="start"
-            className={cn(
-              "text-sm font-medium p-3 max-w-xs border shadow-lg animate-in fade-in-0 zoom-in-95",
-              {
-                'bg-emerald-50/80 backdrop-blur-sm text-emerald-800 border-emerald-200/50 dark:bg-emerald-950/80 dark:text-emerald-200 dark:border-emerald-800/50': status === 'success',
-                'bg-destructive/5 backdrop-blur-sm text-destructive border-destructive/20': status === 'error'
-              }
+        <PopoverContent
+          side="bottom"
+          align="start"
+          className={cn(
+            "w-auto min-w-80 max-w-md p-0 shadow-lg",
+            {
+              // Theme colors with opaque background + colored overlay
+              'bg-background border relative': popupState === 'clipboard_detection',
+              'bg-background border-primary relative before:absolute before:inset-0 before:bg-primary/10 before:pointer-events-none': popupState === 'submission_result' && clipboardSubmissionResult !== 'error',
+              'bg-background border-destructive relative before:absolute before:inset-0 before:bg-destructive/10 before:pointer-events-none': popupState === 'submission_result' && clipboardSubmissionResult === 'error',
+              'bg-background border-primary relative before:absolute before:inset-0 before:bg-primary/10 before:pointer-events-none': popupState === 'regular_feedback' && status === 'success',
+              'bg-background border-destructive relative before:absolute before:inset-0 before:bg-destructive/10 before:pointer-events-none': popupState === 'regular_feedback' && status === 'error',
+            }
+          )}
+          sideOffset={4}
+          onInteractOutside={(e) => {
+            // Prevent closing when clicking outside for debugging
+            console.log('PopoverContent interact outside triggered')
+          }}
+        >
+          <AnimatePresence mode="wait">
+            {popupState === 'clipboard_detection' && (
+              <motion.div
+                key="clipboard-detection"
+                variants={containerVariants}
+                initial="hidden"
+                animate="visible"
+                exit="exit"
+                className="p-4"
+              >
+                <motion.div variants={itemVariants} className="flex items-center gap-2 mb-3">
+                  <motion.div
+                    initial={{ rotate: -10, scale: 0 }}
+                    animate={{ rotate: 0, scale: 1 }}
+                    transition={{ type: "spring", stiffness: 500, delay: 0.1 }}
+                  >
+                    <Clipboard className="h-4 w-4 text-accent flex-shrink-0" />
+                  </motion.div>
+                  <span className="text-sm font-medium text-accent">Flag detected in clipboard</span>
+                </motion.div>
+
+                <motion.div variants={itemVariants} className="text-xs text-muted-foreground mb-4 font-mono bg-muted/80 p-3 rounded border break-all min-w-0">
+                  {clipboardFlag}
+                </motion.div>
+
+                <motion.div variants={itemVariants} className="flex flex-wrap gap-2">
+                  <motion.div variants={buttonVariants}>
+                    <Button
+                      size="sm"
+                      onClick={handleClipboardSubmit}
+                      disabled={isSubmitting}
+                    >
+                      Submit Flag
+                    </Button>
+                  </motion.div>
+                  <motion.div variants={buttonVariants}>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={handleClipboardDismiss}
+                    >
+                      Dismiss
+                    </Button>
+                  </motion.div>
+                </motion.div>
+              </motion.div>
             )}
-          >
-            {message}
-          </PopoverContent>
-        )}
+
+            {popupState === 'submission_result' && (
+              <motion.div
+                key="submission-result"
+                variants={containerVariants}
+                initial="hidden"
+                animate="visible"
+                exit="exit"
+                className="p-4"
+              >
+                <motion.div variants={itemVariants} className="flex items-center gap-2 mb-3">
+                  <motion.div
+                    initial={{ scale: 0, rotate: clipboardSubmissionResult === 'error' ? -90 : 0 }}
+                    animate={{ scale: 1, rotate: 0 }}
+                    transition={{
+                      type: "spring",
+                      stiffness: 600,
+                      delay: 0.1,
+                      duration: 0.6
+                    }}
+                  >
+                    {clipboardSubmissionResult === 'error' ? (
+                      <X className="h-4 w-4 text-destructive flex-shrink-0" />
+                    ) : (
+                      <Check className="h-4 w-4 text-primary flex-shrink-0" />
+                    )}
+                  </motion.div>
+                  <motion.span
+                    variants={itemVariants}
+                    className="text-sm font-medium"
+                  >
+                    {clipboardSubmissionResult === 'error'
+                      ? 'Incorrect Flag'
+                      : clipboardSubmissionResult === 'already_solved'
+                        ? 'Already Solved'
+                        : 'Congratulations!'
+                    }
+                  </motion.span>
+                </motion.div>
+
+                <motion.div
+                  variants={itemVariants}
+                  className="text-xs mb-4 opacity-80"
+                >
+                  {clipboardSubmissionResult === 'error'
+                    ? message || 'The flag you submitted is incorrect. Please try again.'
+                    : clipboardSubmissionResult === 'already_solved'
+                      ? 'This challenge has already been completed.'
+                      : 'Flag submitted successfully! Well done solving this challenge.'
+                  }
+                </motion.div>
+
+                <motion.div variants={itemVariants} className="flex flex-wrap gap-2">
+                  {clipboardSubmissionResult === 'fresh_success' && (
+                    <motion.div variants={buttonVariants}>
+                      <Button
+                        size="sm"
+                        onClick={handleNextChallenge}
+                      >
+                        <ChevronRight className="h-3 w-3 mr-1" />
+                        Next Challenge
+                      </Button>
+                    </motion.div>
+                  )}
+                  <motion.div variants={buttonVariants}>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={handleClipboardDismiss}
+                    >
+                      Dismiss
+                    </Button>
+                  </motion.div>
+                </motion.div>
+              </motion.div>
+            )}
+
+            {popupState === 'regular_feedback' && (
+              <motion.div
+                key="regular-feedback"
+                variants={containerVariants}
+                initial="hidden"
+                animate="visible"
+                exit="exit"
+                className="p-4"
+              >
+                <motion.div variants={itemVariants} className="flex items-center gap-2 mb-2">
+                  <motion.div
+                    initial={{ scale: 0, rotate: status === 'error' ? -90 : 0 }}
+                    animate={{ scale: 1, rotate: 0 }}
+                    transition={{
+                      type: "spring",
+                      stiffness: 600,
+                      delay: 0.1,
+                      duration: 0.6
+                    }}
+                  >
+                    {status === 'success' ? (
+                      <Check className="h-4 w-4 text-primary flex-shrink-0" />
+                    ) : (
+                      <X className="h-4 w-4 text-destructive flex-shrink-0" />
+                    )}
+                  </motion.div>
+                  <motion.span
+                    variants={itemVariants}
+                    className="text-sm font-medium"
+                  >
+                    {status === 'success' ? 'Success!' : 'Error'}
+                  </motion.span>
+                </motion.div>
+
+                <motion.div
+                  variants={itemVariants}
+                  className="text-xs mb-4 opacity-80"
+                >
+                  {message}
+                </motion.div>
+
+                <motion.div variants={itemVariants} className="flex flex-wrap gap-2">
+                  {status === 'success' && (
+                    <motion.div variants={buttonVariants}>
+                      <Button
+                        size="sm"
+                        onClick={handleNextChallenge}
+                      >
+                        <ChevronRight className="h-3 w-3 mr-1" />
+                        Next Challenge
+                      </Button>
+                    </motion.div>
+                  )}
+                  <motion.div variants={buttonVariants}>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={hidePopup}
+                      className={status === 'error' ? 'text-destructive hover:text-destructive hover:bg-destructive/10 focus-visible:ring-destructive' : ''}
+                    >
+                      Dismiss
+                    </Button>
+                  </motion.div>
+                </motion.div>
+              </motion.div>
+            )}
+
+            {/* Fallback content if no state matches */}
+            {!popupState && (
+              <motion.div
+                key="no-content"
+                variants={containerVariants}
+                initial="hidden"
+                animate="visible"
+                exit="exit"
+                className="p-4 text-sm text-muted-foreground"
+              >
+                No content to display
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </PopoverContent>
       </Popover>
     </div>
   )

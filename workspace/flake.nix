@@ -133,7 +133,6 @@
               which
               ncdu
               nodejs
-              wireshark
               bat
               (lib.hiPrio pythonEnv)
               (lib.hiPrio ldd)

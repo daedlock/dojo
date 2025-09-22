@@ -2,6 +2,7 @@
 
 let
   service = import ./service.nix { inherit pkgs; };
+  themes = import ../themes { inherit pkgs; };
 
   rgScript = pkgs.writeScript "rg" ''
     #!${pkgs.python3}/bin/python3
@@ -51,6 +52,56 @@ let
       fi
     fi
 
+    # Load theme and prepare workspace settings
+    THEME_NAME="''${TERMINAL_THEME_NAME:-matrix}"
+    echo "[CODE] Loading theme: $THEME_NAME" >&2
+
+    case "$THEME_NAME" in
+      "matrix")
+        THEME_SETTINGS=$(cat ${themes.getVSCodeTheme "matrix"})
+        ;;
+      "amethyst")
+        THEME_SETTINGS=$(cat ${themes.getVSCodeTheme "amethyst"})
+        ;;
+      "solarized")
+        THEME_SETTINGS=$(cat ${themes.getVSCodeTheme "solarized"})
+        ;;
+      "everforest")
+        THEME_SETTINGS=$(cat ${themes.getVSCodeTheme "everforest"})
+        ;;
+      "gruvbox")
+        THEME_SETTINGS=$(cat ${themes.getVSCodeTheme "gruvbox"})
+        ;;
+      *)
+        THEME_SETTINGS=$(cat ${themes.getVSCodeTheme "matrix"})
+        echo "[CODE] Unknown theme '$THEME_NAME', using matrix" >&2
+        ;;
+    esac
+
+    # Setup workspace settings directory for default theme
+    # This can be overridden by user settings
+    WORKSPACE_DIR="/home/hacker"
+    WORKSPACE_SETTINGS_DIR="$WORKSPACE_DIR/.vscode"
+    mkdir -p "$WORKSPACE_SETTINGS_DIR"
+
+    # Only write theme settings if no user settings exist
+    if [ ! -f "$WORKSPACE_SETTINGS_DIR/settings.json" ]; then
+      # Write settings file
+      echo "$THEME_SETTINGS" > "$WORKSPACE_SETTINGS_DIR/settings.json"
+      # Immediately fix ownership
+      chown hacker:hacker "$WORKSPACE_SETTINGS_DIR/settings.json"
+      # Double-check with explicit user and group IDs (1000:1000 for hacker)
+      chown 1000:1000 "$WORKSPACE_SETTINGS_DIR/settings.json"
+      echo "[CODE] Theme settings written to workspace: $WORKSPACE_SETTINGS_DIR/settings.json" >&2
+      ls -la "$WORKSPACE_SETTINGS_DIR/settings.json" >&2
+    else
+      echo "[CODE] Existing workspace settings found, preserving user preferences" >&2
+    fi
+
+    # Ensure all workspace settings directory is owned by hacker
+    chown -R hacker:hacker "$WORKSPACE_SETTINGS_DIR" 2>/dev/null || true
+    chown -R 1000:1000 "$WORKSPACE_SETTINGS_DIR" 2>/dev/null || true
+
     ${service}/bin/dojo-service start code-service/code-server \
       ${code-server}/bin/code-server \
         --auth=none \
@@ -59,6 +110,7 @@ let
         --disable-telemetry \
         --extensions-dir=$EXTENSIONS_DIR \
         --config=/dev/null
+
 
     until ${pkgs.curl}/bin/curl -fs localhost:8080 >/dev/null; do sleep 0.1; done
   '';
@@ -85,6 +137,7 @@ in pkgs.stdenv.mkDerivation {
     ln -s ${code-server}/bin/code-server $out/bin/code-server
     ln -s ${code-server}/bin/code-server $out/bin/code
 
+    echo "-------------------------- Installing extensions ---------------------------" >&2
     mkdir -p $out/share/code/extensions
     ${pkgs.wget}/bin/wget -P $NIX_BUILD_TOP 'https://github.com/microsoft/vscode-cpptools/releases/download/v1.20.5/cpptools-linux.vsix'
     export HOME=$NIX_BUILD_TOP
@@ -92,9 +145,12 @@ in pkgs.stdenv.mkDerivation {
       --auth=none \
       --disable-telemetry \
       --extensions-dir=$out/share/code/extensions \
+      --install-extension vatsalsy.gruvbox-crisp-tex \
+      --install-extension mangeshrex.everblush \
       --install-extension ms-python.python \
-      --install-extension $NIX_BUILD_TOP/cpptools-linux.vsix
+      --install-extension $NIX_BUILD_TOP/cpptools-linux.vsix 
     chmod +x $out/share/code/extensions/ms-vscode.cpptools-*/{bin/cpptools*,bin/libc.so,debugAdapters/bin/OpenDebugAD7,LLVM/bin/clang-*}
+    echo "-------------------------- Done installing extensions ---------------------------" >&2
 
     runHook postInstall
   '';

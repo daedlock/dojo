@@ -73,6 +73,8 @@ let
       dbus
       dejavu_fonts
       blackbird
+      gedit
+      wireshark
     ]);
   };
 
