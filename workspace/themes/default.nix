@@ -18,34 +18,33 @@ let
         "window.autoDetectColorScheme" = false;
         "window.commandCenter" = false;
         "workbench.layoutControl.enabled" = false;
+        "editor.fontFamily" = "JetBrainsMono Nerd Font, DejaVu Sans Mono, Consolas, Monaco, Menlo, Courier New, monospace";
+        "editor.fontSize" = 14;
+        "editor.fontLigatures" = true;
+        "terminal.integrated.fontFamily" = "JetBrainsMono Nerd Font, DejaVu Sans Mono, Consolas, Monaco, Menlo, Courier New, monospace";
+        "terminal.integrated.fontSize" = 14;
+         "editor.minimap.enabled" = false;
       };
     in
     if themeName == "gruvbox" then
       baseSettings // {
-        "workbench.colorTheme" = "Gruvbox Crisp Dark Soft";
-        "workbench.preferredDarkColorTheme" = "Gruvbox Crisp Dark Soft";
+        "workbench.colorTheme" = "Gruvbox Crisp (High Contrast, with TeX)";
       }
     else if themeName == "everforest" then
       baseSettings // {
-        "workbench.colorTheme" = "Everblush";
-        "workbench.preferredDarkColorTheme" = "Everblush";
+        "workbench.colorTheme" = "Everforest Dark";
+      }
+    else if themeName == "matrix" then
+      baseSettings // {
+        "workbench.colorTheme" = "Matrixish";
       }
     else if themeName == "solarized" then
       baseSettings // {
         "workbench.colorTheme" = "Solarized Dark";
-        "workbench.preferredDarkColorTheme" = "Solarized Dark";
       }
-    else if themeName == "amethyst" then
+    else # amethyst and any other themes use default
       baseSettings // {
         "workbench.colorTheme" = "Default Dark+";
-        "workbench.preferredDarkColorTheme" = "Default Dark+";
-        "workbench.colorCustomizations" = theme.vscode;
-      }
-    else # matrix and any other custom themes
-      baseSettings // {
-        "workbench.colorTheme" = "Default Dark+";
-        "workbench.preferredDarkColorTheme" = "Default Dark+";
-        "workbench.colorCustomizations" = theme.vscode;
       }
   ));
 

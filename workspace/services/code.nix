@@ -48,7 +48,10 @@ let
       # Copy pre-installed extensions if they don't exist
       if [ ! -d "$EXTENSIONS_DIR/ms-python.python" ]; then
         cp -r @out@/share/code/extensions/* "$EXTENSIONS_DIR/" 2>/dev/null || true
+        # Fix ownership and permissions for extensions
         chown -R hacker:hacker "$EXTENSIONS_DIR" 2>/dev/null || true
+        chmod -R u+w "$EXTENSIONS_DIR" 2>/dev/null || true
+        echo "[CODE] Extensions copied and permissions fixed" >&2
       fi
     fi
 
@@ -84,22 +87,14 @@ let
     WORKSPACE_SETTINGS_DIR="$WORKSPACE_DIR/.vscode"
     mkdir -p "$WORKSPACE_SETTINGS_DIR"
 
-    # Only write theme settings if no user settings exist
-    if [ ! -f "$WORKSPACE_SETTINGS_DIR/settings.json" ]; then
-      # Write settings file
-      echo "$THEME_SETTINGS" > "$WORKSPACE_SETTINGS_DIR/settings.json"
-      # Immediately fix ownership
-      chown hacker:hacker "$WORKSPACE_SETTINGS_DIR/settings.json"
-      # Double-check with explicit user and group IDs (1000:1000 for hacker)
-      chown 1000:1000 "$WORKSPACE_SETTINGS_DIR/settings.json"
-      echo "[CODE] Theme settings written to workspace: $WORKSPACE_SETTINGS_DIR/settings.json" >&2
-      ls -la "$WORKSPACE_SETTINGS_DIR/settings.json" >&2
-    else
-      echo "[CODE] Existing workspace settings found, preserving user preferences" >&2
-    fi
+    # Ensure directory is owned by hacker user
+    chown -R 1000:1000 "$WORKSPACE_SETTINGS_DIR" 2>/dev/null || true
 
-    # Ensure all workspace settings directory is owned by hacker
-    chown -R hacker:hacker "$WORKSPACE_SETTINGS_DIR" 2>/dev/null || true
+   echo "$THEME_SETTINGS" > "$WORKSPACE_SETTINGS_DIR/settings.json"
+    chown 1000:1000 "$WORKSPACE_SETTINGS_DIR/settings.json" 2>/dev/null || true
+
+
+    # Final ownership check to ensure everything is owned by hacker user
     chown -R 1000:1000 "$WORKSPACE_SETTINGS_DIR" 2>/dev/null || true
 
     ${service}/bin/dojo-service start code-service/code-server \
@@ -139,17 +134,16 @@ in pkgs.stdenv.mkDerivation {
 
     echo "-------------------------- Installing extensions ---------------------------" >&2
     mkdir -p $out/share/code/extensions
-    ${pkgs.wget}/bin/wget -P $NIX_BUILD_TOP 'https://github.com/microsoft/vscode-cpptools/releases/download/v1.20.5/cpptools-linux.vsix'
     export HOME=$NIX_BUILD_TOP
+
     ${code-server}/bin/code-server \
       --auth=none \
       --disable-telemetry \
       --extensions-dir=$out/share/code/extensions \
       --install-extension vatsalsy.gruvbox-crisp-tex \
+      --install-extension sainnhe.everforest \
       --install-extension mangeshrex.everblush \
-      --install-extension ms-python.python \
-      --install-extension $NIX_BUILD_TOP/cpptools-linux.vsix 
-    chmod +x $out/share/code/extensions/ms-vscode.cpptools-*/{bin/cpptools*,bin/libc.so,debugAdapters/bin/OpenDebugAD7,LLVM/bin/clang-*}
+      --install-extension sjsepan.sjsepan-matrixish
     echo "-------------------------- Done installing extensions ---------------------------" >&2
 
     runHook postInstall

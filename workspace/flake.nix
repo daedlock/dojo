@@ -140,6 +140,7 @@
               exec-suid
               sudo
               ssh-entrypoint
+              cmatrix
               zsh-setup
               service
               code-service
