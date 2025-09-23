@@ -6,9 +6,9 @@ services:
     restart: always
     build: ./frontend
     environment:
-      - VIRTUAL_HOST=future.${DOJO_HOST}
+      - VIRTUAL_HOST=app.dlock.tech
       - VIRTUAL_PORT=80
-      - LETSENCRYPT_HOST=future.${DOJO_HOST}
+      - LETSENCRYPT_HOST=app.dlock.tech
       - VITE_CTFD_API_URL=https://${DOJO_HOST}/api/v1
       - VITE_DOJO_API_URL=https://${DOJO_HOST}/pwncollege_api/v1
     healthcheck:

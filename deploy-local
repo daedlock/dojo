@@ -36,6 +36,15 @@ if [ "$REBUILD_WORKSPACE" = true ]; then
     docker exec dojo docker ps -q --filter "name=user_" | xargs -r docker exec dojo docker restart
 fi
 
+# check if --prod is set
+if [[ "$1" == "--prod" ]]; then
+    echo "Running in production mode"
+    export DOJO_HOST="dojo.dlock.tech"
+    export CROSS_ORIGINS="app.dlock.tech"
+else
+    export DOJO_HOST="localhost"
+    export CROSS_ORIGINS="http://localhost:5173"
+fi
 
 docker build -t pwncollege/dojo .
 docker stop dojo
@@ -51,5 +60,6 @@ docker run \
     -p 443:443 \
     -e INTERNET_FOR_ALL=True \
     -e CORS_ORIGINS="http://localhost:5173" \
+    -e DOJO_HOST="${DOJO_HOST}" \
     -d \
     pwncollege/dojo
