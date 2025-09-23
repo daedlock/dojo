@@ -66,5 +66,6 @@ docker run \
     -e INTERNET_FOR_ALL=True \
     -e CORS_ORIGINS="${CROSS_ORIGINS}" \
     -e DOJO_HOST="${DOJO_HOST}" \
+    -e VIRTUAL_HOST="${DOJO_HOST}" \
     -d \
     pwncollege/dojo
