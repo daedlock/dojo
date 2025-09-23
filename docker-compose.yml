@@ -9,6 +9,8 @@ services:
       - VIRTUAL_HOST=future.${DOJO_HOST}
       - VIRTUAL_PORT=80
       - LETSENCRYPT_HOST=future.${DOJO_HOST}
+      - VITE_CTFD_API_URL=https://${DOJO_HOST}/api/v1
+      - VITE_DOJO_API_URL=https://${DOJO_HOST}/pwncollege_api/v1
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:80"]
       interval: 30s
