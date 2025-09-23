@@ -13,23 +13,4 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
-  server: {
-    proxy: {
-      // Proxy API requests to the backend
-      '/api': 'http://localhost',
-      '/pwncollege_api': 'http://localhost',
-
-      // Proxy asset requests to the backend
-      '/belt': 'http://localhost',
-      '/static': 'http://localhost',
-      '/assets': 'http://localhost',
-
-      // Proxy any other backend routes that might be needed
-      '/admin': 'http://localhost',
-      '/teams': 'http://localhost',
-      '/users': 'http://localhost',
-      '/challenges': 'http://localhost',
-      '/scoreboard': 'http://localhost',
-    }
-  }
 })

@@ -20,6 +20,9 @@ function App() {
   useEffect(() => {
     // Initialize all stores on app start
     initializeStores()
+    console.log("------------- ENV -------------")
+    console.log(import.meta.env)
+    console.log("------------- EENV -------------")
   }, [])
 
   return (
