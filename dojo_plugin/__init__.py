@@ -143,13 +143,17 @@ def load(app):
     setup_uncaught_error_logging(app)
 
     app.permanent_session_lifetime = datetime.timedelta(days=180)
+
+    
+    # Get CORS origin from environment variable
+    cors_origin = os.environ.get('CORS_ORIGINS', 'http://localhost:5173')
     
     # Add CORS headers for API endpoints
     @app.after_request
     def add_cors_headers(response):
         # Only add CORS headers for API routes
         if request.path.startswith('/pwncollege_api/'):
-            response.headers['Access-Control-Allow-Origin'] = 'http://localhost:5173'
+            response.headers['Access-Control-Allow-Origin'] = cors_origin
             response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, PATCH, DELETE, OPTIONS'
             response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
             response.headers['Access-Control-Allow-Credentials'] = 'true'
