@@ -45,10 +45,10 @@ fi
 if [ "$PROD_MODE" = true ]; then
     echo "Running in production mode"
     export DOJO_HOST="dojo.dlock.tech"
-    export CROSS_ORIGINS="https://app.dlock.tech"
+    export CORS_ORIGINS="https://app.dlock.tech"
 else
     export DOJO_HOST="localhost"
-    export CROSS_ORIGINS="http://localhost:5173"
+    export CORS_ORIGINS="http://localhost:5173"
 fi
 
 docker build -t pwncollege/dojo .
@@ -64,7 +64,7 @@ docker run \
     -p 80:80 \
     -p 443:443 \
     -e INTERNET_FOR_ALL=True \
-    -e CORS_ORIGINS="${CROSS_ORIGINS}" \
+    -e CORS_ORIGINS="${CORS_ORIGINS}" \
     -e DOJO_HOST="${DOJO_HOST}" \
     -e VIRTUAL_HOST="${DOJO_HOST}" \
     -d \
