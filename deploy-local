@@ -1,20 +1,25 @@
 #!/bin/bash
 
 function usage {
-    echo "Usage: $0 [-w]"
+    echo "Usage: $0 [-w] [-p]"
     echo ""
     echo "  -w  rebuild workspace (removes workspace data to force rebuild)"
+    echo "  -p  production mode (sets DOJO_HOST to dojo.dlock.tech)"
     exit
 }
 
 REBUILD_WORKSPACE=false
+PROD_MODE=false
 export DOJO_PATH="./"
 export DATA_PATH="./data"
 
-while getopts "wh" opt; do
+while getopts "wph" opt; do
     case $opt in
     w)
         REBUILD_WORKSPACE=true
+        ;;
+    p)
+        PROD_MODE=true
         ;;
     h)
         usage
@@ -36,11 +41,11 @@ if [ "$REBUILD_WORKSPACE" = true ]; then
     docker exec dojo docker ps -q --filter "name=user_" | xargs -r docker exec dojo docker restart
 fi
 
-# check if --prod is set
-if [[ "$1" == "--prod" ]]; then
+# check if production mode is set
+if [ "$PROD_MODE" = true ]; then
     echo "Running in production mode"
     export DOJO_HOST="dojo.dlock.tech"
-    export CROSS_ORIGINS="app.dlock.tech"
+    export CROSS_ORIGINS="https://app.dlock.tech"
 else
     export DOJO_HOST="localhost"
     export CROSS_ORIGINS="http://localhost:5173"
@@ -59,7 +64,7 @@ docker run \
     -p 80:80 \
     -p 443:443 \
     -e INTERNET_FOR_ALL=True \
-    -e CORS_ORIGINS="http://localhost:5173" \
+    -e CORS_ORIGINS="${CROSS_ORIGINS}" \
     -e DOJO_HOST="${DOJO_HOST}" \
     -d \
     pwncollege/dojo
