@@ -6,6 +6,9 @@ services:
     restart: always
     build:
       context: ./frontend
+      args:
+        VITE_CTFD_API_URL: https://${DOJO_HOST}/api/v1
+        VITE_DOJO_API_URL: https://${DOJO_HOST}/pwncollege_api/v1
     environment:
       - VIRTUAL_HOST=app.dlock.tech
       - VIRTUAL_PORT=80

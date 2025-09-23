@@ -3,6 +3,13 @@ FROM oven/bun:alpine AS builder
 
 WORKDIR /app
 
+# Accept build arguments
+ARG VITE_CTFD_API_URL
+ARG VITE_DOJO_API_URL
+
+ENV VITE_CTFD_API_URL=$VITE_CTFD_API_URL
+ENV VITE_DOJO_API_URL=$VITE_DOJO_API_URL
+
 # Copy package files
 COPY package.json bun.lock* ./
 
