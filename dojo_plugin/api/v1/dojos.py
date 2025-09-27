@@ -1,5 +1,4 @@
 import datetime
-import collections
 
 from flask import request
 from flask_restx import Namespace, Resource
@@ -13,7 +12,6 @@ from CTFd.utils.user import get_current_user, is_admin, get_ip
 from ...models import DojoStudents, Dojos, DojoModules, DojoChallenges, DojoUsers, Emojis, SurveyResponses
 from ...utils import render_markdown, is_challenge_locked
 from ...utils.dojo import dojo_route, dojo_admins_only, dojo_create
-from ...utils.stats import get_container_stats, get_dojo_stats
 
 
 dojos_namespace = Namespace(
@@ -24,27 +22,12 @@ dojos_namespace = Namespace(
 @dojos_namespace.route("")
 class DojoList(Resource):
     def get(self):
-        # Get container stats for active hackers count
-        dojo_container_counts = collections.Counter(stats["dojo"] for stats in get_container_stats())
-
-        # Query dojos with deferred fields for counts
-        dojo_query = (
-            Dojos.viewable(user=get_current_user())
-            .options(db.undefer(Dojos.modules_count),
-                     db.undefer(Dojos.challenges_count),
-                     db.undefer(Dojos.required_challenges_count))
-        )
-
         dojos = [
             dict(id=dojo.reference_id,
                  name=dojo.name,
                  description=dojo.description,
-                 official=dojo.official,
-                 award=dojo.award,
-                 modules=dojo.modules_count,
-                 challenges=dojo.required_challenges_count,
-                 active_hackers=dojo_container_counts.get(dojo.reference_id, 0))
-            for dojo in dojo_query
+                 official=dojo.official)
+            for dojo in Dojos.viewable(user=get_current_user())
         ]
         return {"success": True, "dojos": dojos}
 
@@ -148,15 +131,7 @@ class DojoModuleList(Resource):
             for module in dojo.modules
             if module.visible() or is_dojo_admin
         ]
-
-        # Get dojo stats including the fixed active users count
-        stats = get_dojo_stats(dojo)
-
-        return {
-            "success": True,
-            "modules": modules,
-            "stats": stats
-        }
+        return {"success": True, "modules": modules}
 
 @dojos_namespace.route("/<dojo>/solves")
 class DojoSolveList(Resource):

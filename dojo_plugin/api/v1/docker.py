@@ -141,7 +141,7 @@ def start_container(docker_client, user, as_user, user_mounts, dojo_challenge, p
         environment={
             "HOME": "/home/hacker",
             "PATH": env_path,
-            "SHELL": f"{dojo_bin_path}/fish",
+            "SHELL": f"{dojo_bin_path}/bash",
             "DOJO_AUTH_TOKEN": auth_token,
         },
         labels={
@@ -174,7 +174,7 @@ def start_container(docker_client, user, as_user, user_mounts, dojo_challenge, p
         cpu_quota=400000,
         pids_limit=1024,
         mem_limit="4G",
-        runtime="runc",  # Temporarily use runc for all containers due to Kata/KVM issues
+        runtime="io.containerd.run.kata.v2" if resolved_dojo_challenge.privileged else "runc",
         cap_add=["SYS_PTRACE", "SYS_ADMIN"] if resolved_dojo_challenge.privileged else ["SYS_PTRACE"],
         security_opt=[f"seccomp={SECCOMP}"],
         sysctls={"net.ipv4.ip_unprivileged_port_start": 1024},

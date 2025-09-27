@@ -5,7 +5,7 @@ sensai/
 data/
 cache/
 .env
-frontend/.next
+frontend/
 # Logs
 logs
 *.log
