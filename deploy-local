@@ -1,19 +1,21 @@
 #!/bin/bash
 
 function usage {
-    echo "Usage: $0 [-w] [-p]"
+    echo "Usage: $0 [-w] [-p] [-c]"
     echo ""
     echo "  -w  rebuild workspace (removes workspace data to force rebuild)"
     echo "  -p  production mode (sets DOJO_HOST to dojo.dlock.tech)"
+    echo "  -c  cleanup Docker build cache and dangling images"
     exit
 }
 
 REBUILD_WORKSPACE=false
 PROD_MODE=false
+CLEANUP=false
 export DOJO_PATH="./"
 export DATA_PATH="./data"
 
-while getopts "wphl" opt; do
+while getopts "wphlc" opt; do
     case $opt in
     w)
         REBUILD_WORKSPACE=true
@@ -23,6 +25,9 @@ while getopts "wphl" opt; do
         ;;
     l)
         LOCAL=true
+        ;;
+    c)
+        CLEANUP=true
         ;;
     h)
         usage
@@ -34,11 +39,18 @@ while getopts "wphl" opt; do
     esac
 done
 
+if [ "$CLEANUP" = true ]; then
+    echo "Cleaning up Docker build cache and dangling images..."
+    docker exec dojo docker buildx prune -af
+    docker exec dojo docker image prune -f
+    echo "Cleanup complete"
+fi
+
 if [ "$REBUILD_WORKSPACE" = true ]; then
     echo "Rebuilding workspace"
     sleep 8
     # Build workspace with new dojo
-    docker exec dojo bash -c "export DOJO_WORKSPACE=core && dojo compose --profile workspace up workspace-builder --force-recreate"
+    docker exec dojo bash -c "export DOJO_WORKSPACE=full && dojo compose --profile workspace up workspace-builder --force-recreate"
 
     # Restart any user containers
     docker exec dojo docker ps -q --filter "name=user_" | xargs -r docker exec dojo docker restart
@@ -104,7 +116,9 @@ docker run \
     -p 23:22 \
     -p 80:80 \
     -p 443:443 \
+    -p 5900:5900 \
     -e INTERNET_FOR_ALL=True \
+    -e DOJO_WORKSPACE=full \
     -e CORS_ORIGINS="${CORS_ORIGINS}" \
     -e DOJO_HOST="${DOJO_HOST}" \
     -e FRONTEND_HOST="${FRONTEND_HOST}" \

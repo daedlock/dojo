@@ -31,7 +31,7 @@ services:
       - workspace
     build: ./workspace
     environment:
-      - DOJO_WORKSPACE=${DOJO_WORKSPACE}
+      - DOJO_WORKSPACE=full
       - NIX_GARBAGE_COLLECT=${NIX_GARBAGE_COLLECT:-false}
     volumes:
       - /data/workspace/nix:/nix
@@ -66,6 +66,30 @@ services:
       - /var/run/docker/plugins:/var/run/docker/plugins
     ports:
       - "4201:4201"
+
+  vnc-proxy:
+    container_name: vnc-proxy
+    hostname: vnc-proxy
+    profiles:
+      - main
+    restart: always
+    build: ./vnc-proxy
+    ports:
+      - "5900:5900"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER}
+      - DB_PASS=${DB_PASS}
+    networks:
+      default:
+      workspace_net:
+        ipv4_address: 10.0.0.4
+    depends_on:
+      - db
 
   ctfd:
     container_name: ctfd

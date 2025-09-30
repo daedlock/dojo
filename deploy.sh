@@ -172,7 +172,7 @@ fi
 
 PORT_ARGS=()
 if [ "$EXPORT_PORTS" == "yes" ]; then
-	PORT_ARGS+=("-p" "80:80" "-p" "443:443" "-p" "2222:22")
+	PORT_ARGS+=("-p" "80:80" "-p" "443:443" "-p" "2222:22" "-p" "5900:5900")
 fi
 
 MULTINODE_ARGS=()

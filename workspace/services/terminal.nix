@@ -151,7 +151,6 @@ in pkgs.stdenv.mkDerivation {
     ln -s ${pkgs.zsh}/bin/zsh $out/bin/zsh
     ln -s ${pkgs.fish}/bin/fish $out/bin/fish
     ln -s ${pkgs.neovim}/bin/nvim $out/bin/nvim
-    ln -s ${pkgs.neovim}/bin/nvim $out/bin/vim
     ln -s ${pkgs.ripgrep}/bin/rg $out/bin/rg
     ln -s ${pkgs.fzf}/bin/fzf $out/bin/fzf
     ln -s ${pkgs.fd}/bin/fd $out/bin/fd

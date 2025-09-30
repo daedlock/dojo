@@ -6,7 +6,7 @@ from CTFd.models import Users
 from CTFd.utils.user import get_current_user, is_admin
 from CTFd.utils.decorators import authed_only
 
-from ...utils import get_current_container, container_password
+from ...utils import get_current_container, container_password, user_ipv4
 from ...utils.workspace import start_on_demand_service, reset_home
 
 
@@ -92,6 +92,32 @@ class view_desktop(Resource):
             return {"success": False, "active": True, "error": f"Failed to start service {service}"}
 
         return {"success": True, "active": True, "iframe_src": iframe_src, "service": service, "current_challenge": challenge_info}
+
+
+@workspace_namespace.route("/vnc_url")
+class VncUrl(Resource):
+    @authed_only
+    def get(self):
+        user = get_current_user()
+        container = get_current_container(user)
+
+        if not container:
+            return {"success": False, "error": "No active workspace container"}
+
+        if start_on_demand_service(user, "desktop") is False:
+            return {"success": False, "error": "Failed to start desktop service"}
+
+        interact_password = container_password(container, "desktop", "interact")
+        password = interact_password[:8]
+
+        vnc_url = "vnc.dojo.localhost"
+
+        return {
+            "success": True,
+            "vnc_url": vnc_url,
+            "password": password,
+            "port": 5900
+        }
 
 
 @workspace_namespace.route("/reset_home")

@@ -46,9 +46,12 @@ let
         -localhost 0 \
         -rfbunixpath /run/dojo/var/desktop-service/Xvnc.sock \
         -rfbauth /run/dojo/var/desktop-service/Xvnc.passwd \
-        -nolisten tcp \
-        -geometry 1024x768 \
-        -depth 24
+        -rfbport 5900 \
+        -geometry 1920x1080 \
+        -depth 24 \
+        -AcceptSetDesktopSize=1 \
+        -SendCutText=1 \
+        -AcceptCutText=1
 
     ${service}/bin/dojo-service start desktop-service/novnc \
       ${novnc}/bin/novnc \

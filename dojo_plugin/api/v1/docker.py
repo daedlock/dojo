@@ -1,5 +1,6 @@
 import datetime
 import hashlib
+import hmac
 import pathlib
 import logging
 import time
@@ -97,7 +98,11 @@ def start_container(docker_client, user, as_user, user_mounts, dojo_challenge, p
         ]
     )[:64]
 
-    auth_token = os.urandom(32).hex()
+    auth_token = hmac.HMAC(
+        current_app.config["SECRET_KEY"].encode(),
+        f"user_{user.id}_vnc_auth".encode(),
+        "sha256"
+    ).hexdigest()
 
     challenge_bin_path = "/run/challenge/bin"
     dojo_bin_path = "/run/dojo/bin"
