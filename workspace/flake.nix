@@ -63,6 +63,7 @@
             sudo = import ./core/sudo.nix { inherit pkgs; };
             ssh-entrypoint = import ./core/ssh-entrypoint.nix { inherit pkgs; };
             zsh-setup = import ./core/zsh-setup.nix { inherit pkgs; };
+            claude-cli = import ./core/claude-cli.nix { inherit pkgs; };
             service = import ./services/service.nix { inherit pkgs; };
             code-service = import ./services/code.nix { inherit pkgs; };
             desktop-service = import ./services/desktop.nix { inherit pkgs; };
@@ -147,6 +148,7 @@
               yazi
               zoxide
               zsh-setup
+              claude-cli
               service
               code-service
               desktop-service

@@ -30,6 +30,13 @@ let
     export GTK_THEME="Adwaita:dark"
     export GTK_DATA_PREFIX="/run/dojo"
 
+    # Setup fontconfig to include our fonts
+    if [ ! -d /home/hacker/.config/fontconfig/conf.d ]; then
+      mkdir -p /home/hacker/.config/fontconfig/conf.d
+      chown -R hacker:hacker /home/hacker/.config
+    fi
+    ln -sf /run/dojo/etc/fonts/conf.d/50-nerd-fonts.conf /home/hacker/.config/fontconfig/conf.d/ 2>/dev/null || true
+
     # No custom theming - just use default XFCE with Adwaita-dark
     echo "[DESKTOP] Using default XFCE with Adwaita-dark theme" >&2
 
@@ -51,7 +58,8 @@ let
         -depth 24 \
         -AcceptSetDesktopSize=1 \
         -SendCutText=1 \
-        -AcceptCutText=1
+        -AcceptCutText=1 \
+        -FrameRate=240
 
     ${service}/bin/dojo-service start desktop-service/novnc \
       ${novnc}/bin/novnc \
@@ -82,10 +90,12 @@ let
     ] ++ (with pkgs; [
       dbus
       dejavu_fonts
+      nerd-fonts.jetbrains-mono
       adwaita-icon-theme        # Adwaita icons (moved to top-level)
       gnome-themes-extra        # Provides Adwaita and Adwaita-dark GTK themes
       gtk3                      # GTK3 runtime
       gtk2                      # GTK2 runtime
+      kitty
       gedit
       wireshark
     ]);
