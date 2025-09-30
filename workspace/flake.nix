@@ -142,6 +142,10 @@
               ssh-entrypoint
               cmatrix
               glow
+              uv
+              ripgrep
+              yazi
+              zoxide
               zsh-setup
               service
               code-service
