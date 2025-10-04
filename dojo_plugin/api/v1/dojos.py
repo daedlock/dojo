@@ -232,10 +232,21 @@ class DojoCourseSolveList(Resource):
 
 @dojos_namespace.route("/<dojo>/<module>/<challenge_id>/solve")
 class DojoChallengeSolve(Resource):
-    @authed_only
     @dojo_route
     def post(self, dojo, module, challenge_id):
-        user = get_current_user()
+        from ...utils import lookup_workspace_token
+        from CTFd.exceptions import UserNotFoundException, UserTokenExpiredException
+
+        workspace_token = request.headers.get("X-Workspace-Token")
+        if workspace_token:
+            try:
+                user = lookup_workspace_token(workspace_token)
+            except (UserNotFoundException, UserTokenExpiredException):
+                return {"success": False, "error": "Invalid workspace token"}, 401
+        else:
+            user = get_current_user()
+            if not user:
+                return {"success": False, "error": "Authentication required"}, 401
         dojo_challenge = (DojoChallenges.from_id(dojo.reference_id, module.id, challenge_id)
                           .filter(DojoChallenges.visible()).first())
         if not dojo_challenge:

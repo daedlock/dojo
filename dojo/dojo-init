@@ -93,6 +93,7 @@ else
 fi
 
 mkdir -p /data/workspace/nix
+mkdir -p /data/workspace/bin
 mkdir -p /data/workspacefs/bin
 mkdir -p /data/ctfd-ipython
 

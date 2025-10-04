@@ -3,6 +3,39 @@
 let
   service = import ./service.nix { inherit pkgs; };
 
+  xorgConf = pkgs.writeText "xorg.conf" ''
+    Section "ServerFlags"
+      Option "DontVTSwitch" "true"
+      Option "AllowMouseOpenFail" "true"
+      Option "PciForceNone" "true"
+      Option "AutoEnableDevices" "false"
+      Option "AutoAddDevices" "false"
+    EndSection
+
+    Section "Device"
+      Identifier "Card0"
+      Driver "dummy"
+      VideoRam 256000
+    EndSection
+
+    Section "Monitor"
+      Identifier "Monitor0"
+      HorizSync 31.5-48.5
+      VertRefresh 50-70
+    EndSection
+
+    Section "Screen"
+      Identifier "Screen0"
+      Device "Card0"
+      Monitor "Monitor0"
+      DefaultDepth 24
+      SubSection "Display"
+        Depth 24
+        Modes "1920x1080"
+      EndSubSection
+    EndSection
+  '';
+
   # Revert https://github.com/novnc/noVNC/pull/1672
   reconnectPatch = pkgs.writeText "reconnect_patch.diff" ''
     --- a/share/webapps/novnc/app/ui.js
@@ -29,6 +62,10 @@ let
     # Ensure GTK can find themes and icons
     export GTK_THEME="Adwaita:dark"
     export GTK_DATA_PREFIX="/run/dojo"
+
+    # GPU acceleration
+    export __GLX_VENDOR_LIBRARY_NAME=nvidia
+    export LIBGL_ALWAYS_INDIRECT=0
 
     # Setup fontconfig to include our fonts
     if [ ! -d /home/hacker/.config/fontconfig/conf.d ]; then
@@ -59,7 +96,8 @@ let
         -AcceptSetDesktopSize=1 \
         -SendCutText=1 \
         -AcceptCutText=1 \
-        -FrameRate=240
+        -FrameRate=240 \
+        -fakescreenfps 240
 
     ${service}/bin/dojo-service start desktop-service/novnc \
       ${novnc}/bin/novnc \
@@ -68,6 +106,18 @@ let
 
     until [ -e /tmp/.X11-unix/X0 ]; do sleep 0.1; done
     until ${pkgs.curl}/bin/curl -fs localhost:6080 >/dev/null; do sleep 0.1; done
+
+    mkdir -p /home/hacker/.config/sunshine
+    cat > /home/hacker/.config/sunshine/sunshine.conf <<EOF
+capture = x11
+encoder = software
+output_name = 0
+min_log_level = info
+EOF
+    chown -R hacker:hacker /home/hacker/.config/sunshine
+    export DISPLAY=:0
+    ${service}/bin/dojo-service start desktop-service/sunshine \
+      ${pkgs.sunshine}/bin/sunshine /home/hacker/.config/sunshine
 
     # By default, xfce4-session invokes dbus-launch without `--config-file`, and it fails to find /etc/dbus-1/session.conf; so we manually specify the config file here.
     ${service}/bin/dojo-service start desktop-service/xfce4-session \
@@ -89,13 +139,14 @@ let
       thunar
     ] ++ (with pkgs; [
       dbus
+      xorg.xf86videodummy
       dejavu_fonts
       nerd-fonts.jetbrains-mono
       adwaita-icon-theme        # Adwaita icons (moved to top-level)
       gnome-themes-extra        # Provides Adwaita and Adwaita-dark GTK themes
       gtk3                      # GTK3 runtime
       gtk2                      # GTK2 runtime
-      kitty
+      sunshine
       gedit
       wireshark
     ]);

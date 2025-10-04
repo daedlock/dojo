@@ -1,0 +1,1111 @@
+#!/usr/bin/env python3
+import sys
+import os
+import json
+import subprocess
+
+API_BASE = "http://10.0.0.3/pwncollege_api/v1"
+
+class Colors:
+    RESET = '\033[0m'
+    BOLD = '\033[1m'
+    DIM = '\033[2m'
+
+    BLACK = '\033[30m'
+    RED = '\033[31m'
+    GREEN = '\033[32m'
+    YELLOW = '\033[33m'
+    BLUE = '\033[34m'
+    MAGENTA = '\033[35m'
+    CYAN = '\033[36m'
+    WHITE = '\033[37m'
+
+    BG_GREEN = '\033[42m'
+    BG_RED = '\033[41m'
+    BG_YELLOW = '\033[43m'
+    BG_BLUE = '\033[44m'
+
+def print_header(text, color=Colors.CYAN):
+    print(f"\n{Colors.BOLD}{color}╭─ {text}{Colors.RESET}")
+
+def print_item(icon, text, color=Colors.WHITE, indent=0):
+    spaces = "  " * indent
+    print(f"{spaces}{color}{icon}{Colors.RESET} {text}")
+
+def print_success(text):
+    print(f"\n{Colors.BOLD}{Colors.GREEN}✓{Colors.RESET} {Colors.GREEN}{text}{Colors.RESET}")
+
+def print_error(text):
+    print(f"\n{Colors.BOLD}{Colors.RED}✗{Colors.RESET} {Colors.RED}{text}{Colors.RESET}")
+
+def print_info(text):
+    print(f"\n{Colors.BOLD}{Colors.CYAN}ℹ{Colors.RESET} {Colors.CYAN}{text}{Colors.RESET}")
+
+def print_warning(text):
+    print(f"\n{Colors.BOLD}{Colors.YELLOW}⚠{Colors.RESET} {Colors.YELLOW}{text}{Colors.RESET}")
+
+def print_box(lines, color=Colors.GREEN):
+    max_len = max(len(line) for line in lines)
+    print(f"\n{Colors.BOLD}{color}╔{'═' * (max_len + 2)}╗{Colors.RESET}")
+    for line in lines:
+        padding = ' ' * (max_len - len(line))
+        print(f"{Colors.BOLD}{color}║{Colors.RESET} {line}{padding} {Colors.BOLD}{color}║{Colors.RESET}")
+    print(f"{Colors.BOLD}{color}╚{'═' * (max_len + 2)}╝{Colors.RESET}")
+
+def get_session():
+    session = os.environ.get('DOJO_SESSION')
+    if not session:
+        print_error("Not in a dojo workspace")
+        sys.exit(1)
+    return session
+
+def api_call(method, endpoint, data=None):
+    session = get_session()
+    cmd = ['curl', '-s', '-w', '\n%{http_code}']
+
+    if method == 'POST':
+        cmd.extend(['-X', 'POST'])
+
+    cmd.extend([
+        '-H', f'Cookie: session={session}',
+        '-H', 'Authorization: Bearer dojo'
+    ])
+
+    if data:
+        cmd.extend([
+            '-H', 'Content-Type: application/json',
+            '-d', json.dumps(data)
+        ])
+
+    cmd.append(f'{API_BASE}{endpoint}')
+
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    lines = result.stdout.strip().rsplit('\n', 1)
+    http_code = lines[-1] if len(lines) > 1 else '000'
+    body = lines[0] if len(lines) > 1 else result.stdout
+
+    try:
+        return http_code, json.loads(body)
+    except json.JSONDecodeError:
+        return http_code, {'error': 'Invalid response', 'raw': body[:200]}
+
+def read_flag(flag_arg):
+    if flag_arg:
+        return flag_arg
+
+    if not sys.stdin.isatty():
+        return sys.stdin.read().strip()
+
+    try:
+        with open('/flag', 'r') as f:
+            return f.read().strip()
+    except PermissionError:
+        print_error("Cannot read /flag")
+        print(f"{Colors.DIM}  Try: sudo dojo submit{Colors.RESET}")
+        sys.exit(1)
+    except FileNotFoundError:
+        print_error("/flag not found")
+        sys.exit(1)
+
+def format_challenge_name(name):
+    if name is None:
+        return ""
+    return name.replace('-', ' ').replace('_', ' ').title()
+
+def cmd_submit(args):
+    flag = read_flag(args[0] if args else None)
+
+    dojo_id = os.environ.get('DOJO_ID')
+    module_id = os.environ.get('DOJO_MODULE')
+    challenge_id = os.environ.get('DOJO_CHALLENGE')
+
+    if not all([dojo_id, module_id, challenge_id]):
+        print_error("Challenge info not available")
+        sys.exit(1)
+
+    print(f"{Colors.DIM}Submitting flag for {Colors.BOLD}{format_challenge_name(challenge_id)}{Colors.RESET}{Colors.DIM}...{Colors.RESET}")
+
+    http_code, data = api_call('POST', f'/dojos/{dojo_id}/{module_id}/{challenge_id}/solve',
+                                {'submission': flag})
+
+    if http_code == '200' and data.get('success'):
+        status = data.get('status', 'solved')
+        if status == 'solved':
+            print_box([
+                "🎉  Challenge Solved!  🎉",
+                "",
+                f"Challenge: {format_challenge_name(challenge_id)}"
+            ], Colors.GREEN)
+            print(f"\n{Colors.DIM}Run {Colors.CYAN}dojo next{Colors.RESET}{Colors.DIM} to start the next challenge{Colors.RESET}")
+        elif status == 'already_solved':
+            print_warning("Already solved")
+        else:
+            print_success(f"Success: {status}")
+        sys.exit(0)
+    elif http_code == '400':
+        if data.get('status') == 'incorrect':
+            print_error("Wrong flag")
+            print(f"{Colors.DIM}  Keep trying! You can do this.{Colors.RESET}")
+        else:
+            error = data.get('error', 'Bad request')
+            print_error(error)
+        sys.exit(1)
+    else:
+        error = data.get('error', f'HTTP {http_code}')
+        print_error(f"Server error: {error}")
+        sys.exit(1)
+
+def cmd_next(args):
+    current_dojo = os.environ.get('DOJO_ID', '')
+    current_module = os.environ.get('DOJO_MODULE', '')
+    current_challenge = os.environ.get('DOJO_CHALLENGE', '')
+
+    http_code, data = api_call('GET', '/docker/next')
+
+    if http_code != '200' or not data.get('success'):
+        error = data.get('error', 'No next challenge')
+        if 'No next challenge' in error or 'not found' in error.lower():
+            print_info("No more challenges in this module")
+            print(f"{Colors.DIM}  Great work! 🎓{Colors.RESET}")
+        else:
+            print_warning(error)
+        return
+
+    next_challenge = data.get('challenge', '')
+
+    print_header("Starting Next Challenge", Colors.CYAN)
+    print_item("📚", f"{Colors.DIM}Module:{Colors.RESET}    {format_challenge_name(current_module)}", Colors.CYAN, 1)
+    print_item("📝", f"{Colors.DIM}Current:{Colors.RESET}   {format_challenge_name(current_challenge)}", Colors.WHITE, 1)
+    print_item("➜", f"{Colors.BOLD}Next:{Colors.RESET}      {Colors.GREEN}{format_challenge_name(next_challenge)}{Colors.RESET}", Colors.GREEN, 1)
+
+    print(f"\n{Colors.DIM}Starting workspace...{Colors.RESET}")
+
+    start_code, start_data = api_call('POST', '/docker', {
+        'dojo': data['dojo'],
+        'module': data['module'],
+        'challenge': data['challenge'],
+        'practice': False
+    })
+
+    if start_code == '200' and start_data.get('success'):
+        print_success("Challenge started!")
+        print(f"{Colors.DIM}  Reconnect to your workspace to continue.{Colors.RESET}")
+    else:
+        error = start_data.get('error', 'Failed to start')
+        print_error(f"Failed to start: {error}")
+
+def get_challenge_description(dojo_id, module_id, challenge_id):
+    http_code, data = api_call('GET', f'/dojos/{dojo_id}/{module_id}/{challenge_id}/description')
+    if http_code == '200' and data.get('success'):
+        return data.get('description', '')
+    return None
+
+def start_specific_challenge(dojo_id, module_id, challenge_id):
+    print(f"\n{Colors.DIM}Starting {Colors.BOLD}{format_challenge_name(challenge_id)}{Colors.RESET}{Colors.DIM}...{Colors.RESET}")
+
+    http_code, data = api_call('POST', '/docker', {
+        'dojo': dojo_id,
+        'module': module_id,
+        'challenge': challenge_id,
+        'practice': False
+    })
+
+    if http_code == '200' and data.get('success'):
+        print_success("Challenge started!")
+        print(f"{Colors.DIM}  Reconnect to your workspace to continue.{Colors.RESET}")
+        sys.exit(0)
+    else:
+        error = data.get('error', 'Failed to start')
+        print_error(f"Failed to start: {error}")
+        sys.exit(1)
+
+def cmd_restart(args):
+    dojo_id = os.environ.get('DOJO_ID')
+    module_id = os.environ.get('DOJO_MODULE')
+    challenge_id = os.environ.get('DOJO_CHALLENGE')
+
+    if not all([dojo_id, module_id, challenge_id]):
+        print_error("Not in a challenge workspace")
+        sys.exit(1)
+
+    practice = '--practice' in args or '-p' in args
+
+    print_header("Restarting Challenge", Colors.CYAN)
+    print_item("📚", f"{Colors.DIM}Dojo:{Colors.RESET}      {dojo_id}", Colors.CYAN, 1)
+    print_item("📂", f"{Colors.DIM}Module:{Colors.RESET}    {format_challenge_name(module_id)}", Colors.CYAN, 1)
+    print_item("📝", f"{Colors.DIM}Challenge:{Colors.RESET} {format_challenge_name(challenge_id)}", Colors.WHITE, 1)
+    print_item("🔄", f"{Colors.DIM}Mode:{Colors.RESET}      {Colors.YELLOW if practice else Colors.GREEN}{'Practice' if practice else 'Regular'}{Colors.RESET}", Colors.CYAN, 1)
+
+    print(f"\n{Colors.DIM}Restarting workspace...{Colors.RESET}")
+
+    http_code, data = api_call('POST', '/docker', {
+        'dojo': dojo_id,
+        'module': module_id,
+        'challenge': challenge_id,
+        'practice': practice
+    })
+
+    if http_code == '200' and data.get('success'):
+        print_success("Challenge restarted!")
+        print(f"{Colors.DIM}  Reconnect to your workspace to continue.{Colors.RESET}")
+    else:
+        error = data.get('error', 'Failed to restart')
+        print_error(f"Failed to restart: {error}")
+        sys.exit(1)
+
+def cmd_info(args):
+    import re
+
+    dojo_id = os.environ.get('DOJO_ID', '').strip()
+    module_id = os.environ.get('DOJO_MODULE', '').strip()
+    challenge_id = os.environ.get('DOJO_CHALLENGE', '').strip()
+
+    http_code, dojos_data = api_call('GET', '/dojos')
+    if http_code != '200' or not dojos_data.get('success'):
+        print_error("Failed to fetch dojos")
+        sys.exit(1)
+
+    all_dojos = dojos_data.get('dojos', [])
+    if not all_dojos:
+        print_error("No dojos found")
+        sys.exit(1)
+
+    try:
+        from textual.app import App, ComposeResult
+        from textual.containers import Container, VerticalScroll
+        from textual.widgets import Header, Footer, Static, ListView, ListItem, Label
+        from textual.binding import Binding
+        HAS_TEXTUAL = True
+    except ImportError:
+        print(f"{Colors.DIM}Installing textual...{Colors.RESET}")
+
+        install_dir = os.path.expanduser('~/.local/lib/python-packages')
+        os.makedirs(install_dir, exist_ok=True)
+
+        if not os.path.exists(install_dir):
+            os.makedirs(install_dir)
+
+        if install_dir not in sys.path:
+            sys.path.insert(0, install_dir)
+
+        result = subprocess.run(['uv', 'pip', 'install', '--python', sys.executable, '--target', install_dir, 'textual', 'beautifulsoup4', 'pygments'],
+                              capture_output=True, text=True)
+        if result.returncode != 0:
+            print_error("Failed to install textual")
+            if result.stderr:
+                print(f"{Colors.DIM}  {result.stderr}{Colors.RESET}")
+            sys.exit(1)
+        try:
+            from textual.app import App, ComposeResult
+            from textual.containers import Container, VerticalScroll
+            from textual.widgets import Header, Footer, Static, ListView, ListItem, Label
+            from textual.binding import Binding
+            HAS_TEXTUAL = True
+        except ImportError:
+            print_error("Textual installation failed")
+            sys.exit(1)
+
+    from textual.widgets import Tree
+    from rich.text import Text
+    from textual.containers import Horizontal, Vertical, VerticalScroll
+    from textual.widgets import Markdown
+
+    class DojoTreeApp(App):
+        CSS = """
+        * {
+            scrollbar-background: transparent;
+            scrollbar-background-hover: transparent;
+            scrollbar-background-active: transparent;
+            scrollbar-color: $text-disabled;
+            scrollbar-color-hover: $text-muted;
+            scrollbar-color-active: $text-muted;
+        }
+
+        Horizontal {
+            height: 1fr;
+        }
+
+        #tree-container {
+            width: 40%;
+        }
+
+        #content-container {
+            width: 60%;
+        }
+
+        Tree {
+            padding: 1;
+        }
+
+        #detail {
+            padding: 2;
+        }
+
+        Markdown {
+            margin: 1 2;
+        }
+
+        MarkdownFence {
+            padding: 1;
+            background: $boost;
+        }
+
+        MarkdownBulletList, MarkdownOrderedList {
+            margin: 0;
+            padding: 0;
+            height: auto;
+        }
+
+        MarkdownListItem {
+            margin: 0;
+            padding: 0;
+            height: 1;
+        }
+
+        #footer-bar {
+            height: 1;
+            dock: bottom;
+            padding: 0 2;
+        }
+
+        ScrollbarCorner {
+            background: $panel;
+        }
+        """
+
+        BINDINGS = [
+            ("q", "quit", "Quit"),
+            ("enter", "start_challenge", "Start Challenge"),
+            ("g,g", "goto_top", "Go to top"),
+            ("shift+g", "goto_bottom", "Go to bottom"),
+            ("j", "cursor_down", "Down"),
+            ("k", "cursor_up", "Up"),
+            ("h", "collapse", "Collapse"),
+            ("l", "expand", "Expand"),
+            ("ctrl+d", "page_down", "Page down"),
+            ("ctrl+u", "page_up", "Page up"),
+            ("ctrl+f", "page_down", "Page down"),
+            ("ctrl+b", "page_up", "Page up"),
+            ("question_mark", "show_help", "Show help"),
+            ("slash", "show_search", "Search"),
+        ]
+
+        def compose(self) -> ComposeResult:
+            with Horizontal():
+                with Vertical(id="tree-container"):
+                    tree = Tree("Dojos", id="tree")
+                    tree.show_root = True
+                    tree.guide_depth = 4
+                    yield tree
+
+                with VerticalScroll(id="content-container"):
+                    md = Markdown("Select a challenge to view details", id="detail")
+                    yield md
+
+            yield Static("  ↑↓ navigate  •  ← → expand/collapse  •  ⏎ start challenge  •  q quit", id="footer-bar")
+
+        def on_mount(self):
+            tree = self.query_one(Tree)
+
+            current_dojo_node = None
+            for dojo in all_dojos:
+                challenges_count = dojo.get('challenges', 0)
+                dojo_label = Text()
+                dojo_label.append(f"📚 {dojo['name']}", style="bold")
+                dojo_label.append(f"  ({challenges_count})", style="dim")
+                dojo_node = tree.root.add(dojo_label, data={"type": "dojo", "id": dojo['id']})
+                dojo_node.allow_expand = True
+                if dojo['id'] == dojo_id:
+                    current_dojo_node = dojo_node
+
+            tree.root.expand()
+
+            if current_dojo_node and dojo_id and module_id and challenge_id:
+                current_dojo_node.expand()
+                self.set_timer(0.1, lambda: self._expand_to_challenge(current_dojo_node))
+
+        def _expand_to_challenge(self, dojo_node):
+            if not dojo_node.children:
+                self.set_timer(0.2, lambda: self._expand_to_challenge(dojo_node))
+                return
+
+            for module_node in dojo_node.children:
+                if module_node.data and module_node.data.get("id") == module_id:
+                    module_node.expand()
+                    self.set_timer(0.3, lambda: self._select_challenge(module_node))
+                    break
+
+        def _select_challenge(self, module_node):
+            tree = self.query_one(Tree)
+
+            if not module_node.children:
+                self.set_timer(0.2, lambda: self._select_challenge(module_node))
+                return
+
+            def find_and_select(parent_node, depth=0):
+                for child_node in parent_node.children:
+                    if child_node.data:
+                        if (child_node.data.get("type") == "challenge" and
+                            child_node.data.get("id") == challenge_id):
+                            tree.select_node(child_node)
+                            tree.scroll_to_node(child_node)
+                            return True
+                        elif child_node.data.get("type") == "section":
+                            if not child_node.is_expanded:
+                                child_node.expand()
+                            if child_node.children:
+                                if find_and_select(child_node, depth + 1):
+                                    return True
+                return False
+
+            if not find_and_select(module_node):
+                self.set_timer(0.3, lambda: self._select_challenge(module_node))
+
+        def on_tree_node_expanded(self, event):
+            node = event.node
+            if node.data and node.data.get("type") == "dojo" and not node.children:
+                dojo_ref_id = node.data["id"]
+
+                http_code, modules_data = api_call('GET', f'/dojos/{dojo_ref_id}/modules')
+                if http_code == '200' and modules_data.get('success'):
+                    http_code, solves_data = api_call('GET', f'/dojos/{dojo_ref_id}/solves')
+                    solved = set()
+                    if http_code == '200' and solves_data.get('success'):
+                        solved = {(s['module_id'], s['challenge_id']) for s in solves_data.get('solves', [])}
+
+                    for module in modules_data.get('modules', []):
+                        unified_items = module.get('unified_items', [])
+                        challenges_in_module = [i for i in unified_items if i.get('item_type') == 'challenge']
+                        solved_in_module = sum(1 for c in challenges_in_module if (module['id'], c['id']) in solved)
+
+                        module_label = Text()
+                        module_label.append(f"📂 {format_challenge_name(module['name'])}")
+                        module_label.append(f"  ({solved_in_module}/{len(challenges_in_module)})", style="dim")
+
+                        module_node = node.add(module_label, data={"type": "module", "dojo": dojo_ref_id, "id": module['id']})
+                        module_node.allow_expand = True
+
+            elif node.data and node.data.get("type") == "module" and not node.children:
+                dojo_ref_id = node.data["dojo"]
+                module_id = node.data["id"]
+
+                http_code, modules_data = api_call('GET', f'/dojos/{dojo_ref_id}/modules')
+                http_code, solves_data = api_call('GET', f'/dojos/{dojo_ref_id}/solves')
+                solved = set()
+                if http_code == '200' and solves_data.get('success'):
+                    solved = {(s['module_id'], s['challenge_id']) for s in solves_data.get('solves', [])}
+
+                if http_code == '200' and modules_data.get('success'):
+                    module = next((m for m in modules_data['modules'] if m['id'] == module_id), None)
+                    if module:
+                        unified_items = module.get('unified_items', [])
+
+                        sections = []
+                        current_section_items = []
+                        current_section_name = None
+
+                        for item in unified_items:
+                            if item['item_type'] == 'resource' and item.get('type') == 'header':
+                                if current_section_name or current_section_items:
+                                    sections.append((current_section_name, current_section_items))
+                                current_section_name = item.get('content', '') or item.get('name', '')
+                                current_section_items = []
+                            else:
+                                current_section_items.append(item)
+
+                        if current_section_name or current_section_items:
+                            sections.append((current_section_name, current_section_items))
+
+                        for section_name, items in sections:
+                            if section_name:
+                                challenges = [i for i in items if i.get('item_type') == 'challenge']
+                                solved_count = sum(1 for c in challenges if (module_id, c['id']) in solved)
+
+                                section_label = Text()
+                                section_label.append(section_name, style="bold")
+                                section_label.append(f"  ({solved_count}/{len(challenges)})", style="dim")
+
+                                section_node = node.add(section_label, data={"type": "section", "name": section_name})
+                                section_node.allow_expand = True
+                                parent = section_node
+                            else:
+                                parent = node
+
+                            for item in items:
+                                if item['item_type'] == 'challenge':
+                                    is_solved = (module_id, item['id']) in solved
+                                    if is_solved:
+                                        label = Text(f"✓ {format_challenge_name(item['name'])}", style="green")
+                                    else:
+                                        label = Text(f"○ {format_challenge_name(item['name'])}")
+                                    challenge_node = parent.add(label, data={"type": "challenge", "dojo": dojo_ref_id, "module": module_id, "id": item['id'], "name": item['name']})
+                                    challenge_node.allow_expand = False
+                                elif item['item_type'] == 'resource':
+                                    res_type = item.get('type', 'resource')
+                                    if res_type == 'lecture':
+                                        label = Text(f"📺 {item.get('name', 'Lecture')}")
+                                    elif res_type == 'markdown':
+                                        if item.get('expandable', True):
+                                            label = Text(f"📄 {item.get('name', 'Resource')}")
+                                        else:
+                                            continue
+                                    else:
+                                        label = Text(f"📦 {item.get('name', 'Resource')}")
+                                    resource_node = parent.add(label, data={"type": "resource", "item": item})
+                                    resource_node.allow_expand = False
+
+        def on_tree_node_selected(self, event):
+            node = event.node
+            detail_widget = self.query_one("#detail", Markdown)
+
+            if node.data:
+                if node.data.get("type") == "challenge":
+                    dojo_ref = node.data["dojo"]
+                    mod_id = node.data["module"]
+                    chal_id = node.data["id"]
+                    chal_name = format_challenge_name(node.data.get("name", "Challenge"))
+
+                    detail_widget.update(f"# {chal_name}\n\nLoading description...")
+
+                    description_html = get_challenge_description(dojo_ref, mod_id, chal_id)
+                    if description_html:
+                        try:
+                            from bs4 import BeautifulSoup
+                            soup = BeautifulSoup(description_html, 'html.parser')
+
+                            md_parts = [f"# {chal_name}\n\n"]
+
+                            for element in soup.children:
+                                if element.name == 'h1':
+                                    md_parts.append(f"# {element.get_text()}\n\n")
+                                elif element.name == 'h2':
+                                    md_parts.append(f"## {element.get_text()}\n\n")
+                                elif element.name == 'h3':
+                                    md_parts.append(f"### {element.get_text()}\n\n")
+                                elif element.name == 'h4':
+                                    md_parts.append(f"#### {element.get_text()}\n\n")
+                                elif element.name == 'p':
+                                    md_parts.append(f"{element.get_text()}\n\n")
+                                elif element.name == 'pre':
+                                    code = element.find('code')
+                                    if code:
+                                        code_text = code.get_text()
+                                        classes = code.get('class', [])
+                                        lang = ''
+                                        for cls in classes:
+                                            if cls.startswith('language-'):
+                                                lang = cls.replace('language-', '')
+                                                break
+                                        md_parts.append(f"```{lang}\n{code_text}```\n\n")
+                                elif element.name == 'ul':
+                                    for li in element.find_all('li', recursive=False):
+                                        text = ' '.join(li.get_text().split())
+                                        md_parts.append(f"- {text}\n")
+                                    md_parts.append("\n")
+                                elif element.name == 'ol':
+                                    for i, li in enumerate(element.find_all('li', recursive=False), 1):
+                                        text = ' '.join(li.get_text().split())
+                                        md_parts.append(f"{i}. {text}\n")
+                                    md_parts.append("\n")
+                                elif element.name == 'blockquote':
+                                    for line in element.get_text().split('\n'):
+                                        if line.strip():
+                                            md_parts.append(f"> {line}\n")
+                                    md_parts.append("\n")
+                                elif element.name == 'hr':
+                                    md_parts.append("---\n\n")
+                                elif element.string and element.string.strip():
+                                    md_parts.append(element.string)
+
+                            description_md = ''.join(md_parts).rstrip() + '\n'
+                        except ImportError:
+                            description_md = f"# {chal_name}\n\n" + re.sub('<[^<]+?>', '', description_html)
+                        detail_widget.update(description_md)
+                    else:
+                        detail_widget.update(f"# {chal_name}\n\nNo description available")
+                elif node.data.get("type") == "resource":
+                    item = node.data.get("item", {})
+                    res_type = item.get('type', '')
+                    res_content = item.get('content', '')
+
+                    if res_type in ['markdown', 'header'] and res_content:
+                        detail_widget.update(f"# {item.get('name', 'Resource')}\n\n{res_content}")
+                    elif res_type == 'lecture':
+                        video = item.get('video', '')
+                        playlist = item.get('playlist', '')
+                        slides = item.get('slides', '')
+                        content = f"# {item.get('name', 'Lecture')}\n\n**Type:** Lecture\n\n"
+                        if video:
+                            content += f"**Video:** {video}\n\n"
+                        if playlist:
+                            content += f"**Playlist:** {playlist}\n\n"
+                        if slides:
+                            content += f"**Slides:** {slides}\n\n"
+                        detail_widget.update(content)
+                    else:
+                        detail_widget.update(f"# {item.get('name', 'Resource')}\n\n*Type: {res_type or 'unknown'}*")
+                elif node.data.get("type") == "section":
+                    detail_widget.update(f"# {node.data.get('name', 'Section')}\n\nExpand to view items in this section")
+                elif node.data.get("type") == "module":
+                    detail_widget.update("# Module\n\nExpand to view challenges and resources")
+                elif node.data.get("type") == "dojo":
+                    detail_widget.update("# Dojo\n\nExpand to view modules")
+
+        def on_tree_node_highlighted(self, event):
+            self.on_tree_node_selected(event)
+
+        def on_key(self, event):
+            if event.key == "enter":
+                tree = self.query_one(Tree)
+                node = tree.cursor_node
+                if node and node.data and node.data.get("type") == "challenge":
+                    self.action_start_challenge()
+                    event.prevent_default()
+                    event.stop()
+
+        def action_start_challenge(self):
+            tree = self.query_one(Tree)
+
+            node = tree.cursor_node
+            if not node:
+                return
+
+            node_data = node.data
+            if not node_data:
+                return
+
+            if node_data.get("type") == "challenge":
+                self.exit()
+                subprocess.run(['clear'])
+
+                dojo_id = node_data["dojo"]
+                module_id = node_data["module"]
+                challenge_id = node_data["id"]
+
+                http_code, data = api_call('POST', '/docker', {
+                    'dojo': dojo_id,
+                    'module': module_id,
+                    'challenge': challenge_id,
+                    'practice': False
+                })
+
+                if http_code == '200' and data.get('success'):
+                    print_success("Challenge started!")
+                    print(f"{Colors.DIM}  Reconnect to your workspace to continue.{Colors.RESET}")
+                else:
+                    error = data.get('error', 'Failed to start')
+                    print_error(f"Failed to start: {error}")
+
+        def action_goto_top(self):
+            tree = self.query_one(Tree)
+            if tree.root.children:
+                first_node = tree.root.children[0]
+                tree.select_node(first_node)
+                tree.scroll_to_node(first_node)
+
+        def action_goto_bottom(self):
+            tree = self.query_one(Tree)
+            def get_last_visible(node):
+                if node.children and node.is_expanded:
+                    return get_last_visible(node.children[-1])
+                return node
+            last_node = get_last_visible(tree.root)
+            tree.select_node(last_node)
+            tree.scroll_to_node(last_node)
+
+        def action_cursor_down(self):
+            tree = self.query_one(Tree)
+            tree.action_cursor_down()
+
+        def action_cursor_up(self):
+            tree = self.query_one(Tree)
+            tree.action_cursor_up()
+
+        def action_collapse(self):
+            tree = self.query_one(Tree)
+            if tree.cursor_node and tree.cursor_node.is_expanded:
+                tree.cursor_node.collapse()
+            elif tree.cursor_node and tree.cursor_node.parent:
+                tree.select_node(tree.cursor_node.parent)
+
+        def action_expand(self):
+            tree = self.query_one(Tree)
+            if tree.cursor_node and tree.cursor_node.allow_expand:
+                tree.cursor_node.expand()
+
+        def action_page_down(self):
+            tree = self.query_one(Tree)
+            for _ in range(10):
+                tree.action_cursor_down()
+
+        def action_page_up(self):
+            tree = self.query_one(Tree)
+            for _ in range(10):
+                tree.action_cursor_up()
+
+        def action_show_help(self):
+            from textual.screen import ModalScreen
+            from textual.containers import Grid
+
+            class HelpScreen(ModalScreen):
+                CSS = """
+                HelpScreen {
+                    align: center middle;
+                }
+
+                Grid {
+                    width: 60;
+                    height: auto;
+                    padding: 1 2;
+                }
+                """
+
+                BINDINGS = [("escape", "dismiss", "Close")]
+
+                def compose(self):
+                    with Grid():
+                        yield Static("# Keybindings\n\n"
+                                   "**Navigation**\n"
+                                   "- `j/k` - Move down/up\n"
+                                   "- `h/l` - Collapse/Expand\n"
+                                   "- `gg` - Go to top\n"
+                                   "- `G` - Go to bottom\n"
+                                   "- `Ctrl+d/u` - Page down/up\n"
+                                   "- `Ctrl+f/b` - Page down/up\n\n"
+                                   "**Actions**\n"
+                                   "- `Enter` - Start challenge\n"
+                                   "- `/` - Search\n"
+                                   "- `?` - Show this help\n"
+                                   "- `q` - Quit\n\n"
+                                   "Press `Esc` to close", id="help-text")
+
+                def action_dismiss(self):
+                    self.dismiss()
+
+            self.push_screen(HelpScreen())
+
+        def action_show_search(self):
+            from textual.screen import ModalScreen
+            from textual.containers import Grid, Vertical
+            from textual.widgets import Input, ListView, ListItem, Label
+
+            class SearchScreen(ModalScreen):
+                CSS = """
+                SearchScreen {
+                    align: center middle;
+                }
+
+                Grid {
+                    width: 80;
+                    height: 30;
+                    padding: 1 2;
+                }
+
+                Input {
+                    margin-bottom: 1;
+                }
+
+                ListView {
+                    height: 1fr;
+                }
+                """
+
+                BINDINGS = [
+                    ("escape", "dismiss", "Close"),
+                    ("down,ctrl+n", "cursor_down", "Down"),
+                    ("up,ctrl+p", "cursor_up", "Up"),
+                ]
+
+                def __init__(self):
+                    super().__init__()
+                    self.results = []
+                    self.search_timer = None
+
+                def compose(self):
+                    with Grid():
+                        with Vertical():
+                            yield Input(placeholder="Search dojos, modules, challenges...", id="search-input")
+                            yield ListView(id="search-results")
+
+                def on_mount(self):
+                    self.query_one(Input).focus()
+
+                def on_input_submitted(self, event):
+                    results_list = self.query_one(ListView)
+                    if len(self.results) > 0:
+                        results_list.focus()
+                        if results_list.index is None or results_list.index < 0:
+                            results_list.index = 0
+
+                def on_list_view_selected(self, event):
+                    self.action_select_item()
+
+                def on_key(self, event):
+                    if event.key == "enter":
+                        results_list = self.query_one(ListView)
+                        if results_list.has_focus and len(self.results) > 0:
+                            self.action_select_item()
+                            event.prevent_default()
+                            event.stop()
+
+                def on_input_changed(self, event):
+                    query = event.value.strip()
+                    if not query or len(query) < 2:
+                        results_list = self.query_one(ListView)
+                        results_list.clear()
+                        self.results = []
+                        if self.search_timer:
+                            self.search_timer.cancel()
+                        return
+
+                    if self.search_timer:
+                        self.search_timer.cancel()
+
+                    results_list = self.query_one(ListView)
+                    results_list.clear()
+                    results_list.append(ListItem(Label("Searching...")))
+
+                    import threading
+                    def do_search():
+                        import subprocess
+                        from urllib.parse import quote
+                        session = os.environ.get('DOJO_SESSION')
+                        if not session:
+                            return
+
+                        encoded_query = quote(query)
+                        cmd = [
+                            'curl', '-s', '-m', '5',
+                            '-H', f'Cookie: session={session}',
+                            '-H', 'Authorization: Bearer dojo',
+                            f'{API_BASE}/search?q={encoded_query}'
+                        ]
+
+                        result = subprocess.run(cmd, capture_output=True, text=True)
+                        try:
+                            data = json.loads(result.stdout)
+                            if data.get("success"):
+                                self.app.call_from_thread(self._update_results, data, query)
+                        except:
+                            pass
+
+                    self.search_timer = threading.Timer(0.3, do_search)
+                    self.search_timer.start()
+
+                def _update_results(self, data, query):
+                    tree = self.app.query_one(Tree)
+                    self.results = []
+                    results_list = self.query_one(ListView)
+                    results_list.clear()
+
+                    def find_node(dojo_id=None, module_id=None, challenge_id=None):
+                        def search_node(node):
+                            if node.data:
+                                if challenge_id and node.data.get('type') == 'challenge' and node.data.get('id') == challenge_id:
+                                    return node
+                                elif module_id and node.data.get('type') == 'module' and node.data.get('id') == module_id:
+                                    return node
+                                elif dojo_id and node.data.get('type') == 'dojo' and node.data.get('id') == dojo_id:
+                                    return node
+                            for child in node.children:
+                                result = search_node(child)
+                                if result:
+                                    return result
+                            return None
+                        return search_node(tree.root)
+
+                    for dojo in data['results']['dojos']:
+                        node = find_node(dojo_id=dojo['id'])
+                        name = dojo['name']
+                        name_lower = name.lower()
+                        query_lower = query.lower()
+                        query_pos = name_lower.find(query_lower)
+
+                        label_text = Text()
+                        label_text.append("○ ")
+                        if query_pos >= 0:
+                            label_text.append(name[:query_pos])
+                            label_text.append(name[query_pos:query_pos + len(query)], style="bold reverse")
+                            label_text.append(name[query_pos + len(query):])
+                        else:
+                            label_text.append(name)
+
+                        label_text.append("  Dojo", style="dim")
+
+                        self.results.append((node, dojo['id'], None, None))
+                        results_list.append(ListItem(Label(label_text)))
+
+                    for module in data['results']['modules']:
+                        node = find_node(module_id=module['id'])
+                        name = module['name']
+                        name_lower = name.lower()
+                        query_lower = query.lower()
+                        query_pos = name_lower.find(query_lower)
+
+                        label_text = Text()
+                        label_text.append("○ ")
+                        if query_pos >= 0:
+                            label_text.append(name[:query_pos])
+                            label_text.append(name[query_pos:query_pos + len(query)], style="bold reverse")
+                            label_text.append(name[query_pos + len(query):])
+                        else:
+                            label_text.append(name)
+
+                        label_text.append("  Module", style="dim")
+                        breadcrumb = f"\n{module['dojo']['name']}"
+                        label_text.append(breadcrumb, style="dim")
+
+                        self.results.append((node, module['dojo']['id'], module['id'], None))
+                        results_list.append(ListItem(Label(label_text)))
+
+                    for challenge in data['results']['challenges']:
+                        node = find_node(challenge_id=challenge['id'])
+                        name = challenge['name']
+                        name_lower = name.lower()
+                        query_lower = query.lower()
+                        query_pos = name_lower.find(query_lower)
+
+                        label_text = Text()
+                        label_text.append("○ ")
+                        if query_pos >= 0:
+                            label_text.append(name[:query_pos])
+                            label_text.append(name[query_pos:query_pos + len(query)], style="bold reverse")
+                            label_text.append(name[query_pos + len(query):])
+                        else:
+                            label_text.append(name)
+
+                        label_text.append("  Challenge", style="dim")
+                        breadcrumb = f"\n{challenge['dojo']['name']} / {challenge['module']['name']}"
+                        label_text.append(breadcrumb, style="dim")
+
+                        if challenge.get('match'):
+                            import re
+                            snippet = re.sub(r'<[^>]+>', '', challenge['match'])
+                            label_text.append(f"\n...{snippet[:60]}...", style="dim italic")
+
+                        self.results.append((node, challenge['dojo']['id'], challenge['module']['id'], challenge['id']))
+                        results_list.append(ListItem(Label(label_text)))
+
+                def action_cursor_down(self):
+                    results_list = self.query_one(ListView)
+                    results_list.action_cursor_down()
+
+                def action_cursor_up(self):
+                    results_list = self.query_one(ListView)
+                    results_list.action_cursor_up()
+
+                def action_select_item(self):
+                    results_list = self.query_one(ListView)
+                    if results_list.index is not None and results_list.index >= 0 and results_list.index < len(self.results):
+                        node, dojo_id, module_id, challenge_id = self.results[results_list.index]
+                        tree = self.app.query_one(Tree)
+
+                        if node:
+                            parent = node.parent
+                            while parent and parent != tree.root:
+                                if not parent.is_expanded:
+                                    parent.expand()
+                                parent = parent.parent
+
+                            tree.select_node(node)
+                            tree.scroll_to_node(node, animate=True)
+                            self.dismiss()
+                        else:
+                            self.dismiss()
+
+                            dojo_node = None
+                            for child in tree.root.children:
+                                if child.data and child.data.get('type') == 'dojo' and child.data.get('id') == dojo_id:
+                                    dojo_node = child
+                                    break
+
+                            if dojo_node and not dojo_node.is_expanded:
+                                tree.select_node(dojo_node)
+                                dojo_node.expand()
+
+                            if module_id and dojo_node:
+                                def find_and_select_module():
+                                    for child in dojo_node.children:
+                                        if child.data and child.data.get('type') == 'module' and child.data.get('id') == module_id:
+                                            tree.select_node(child)
+                                            if not child.is_expanded:
+                                                child.expand()
+                                            tree.scroll_to_node(child, animate=True)
+                                            return
+
+                                self.app.set_timer(0.1, find_and_select_module)
+
+                def action_dismiss(self):
+                    self.dismiss()
+
+            self.push_screen(SearchScreen())
+
+    app = DojoTreeApp()
+    app.run()
+
+def cmd_help():
+    print(f"""
+{Colors.BOLD}{Colors.CYAN}dojo{Colors.RESET} {Colors.DIM}v1.0.0{Colors.RESET}
+
+{Colors.BOLD}USAGE{Colors.RESET}
+  {Colors.CYAN}dojo{Colors.RESET} {Colors.YELLOW}<command>{Colors.RESET} {Colors.DIM}[options]{Colors.RESET}
+
+{Colors.BOLD}COMMANDS{Colors.RESET}
+  {Colors.YELLOW}submit{Colors.RESET} {Colors.DIM}[flag]{Colors.RESET}     Submit a flag for the current challenge
+  {Colors.YELLOW}next{Colors.RESET}                 Start the next challenge in sequence
+  {Colors.YELLOW}restart{Colors.RESET} {Colors.DIM}[--practice]{Colors.RESET} Restart the current challenge
+  {Colors.YELLOW}info{Colors.RESET}                 Browse all dojos in interactive tree view
+  {Colors.YELLOW}help{Colors.RESET}                 Show this help message
+
+{Colors.BOLD}EXAMPLES{Colors.RESET}
+  {Colors.DIM}# Submit flag from /flag file{Colors.RESET}
+  {Colors.CYAN}dojo submit{Colors.RESET}
+
+  {Colors.DIM}# Submit a specific flag{Colors.RESET}
+  {Colors.CYAN}dojo submit{Colors.RESET} {Colors.GREEN}'pwn.college{{...}}'{Colors.RESET}
+
+  {Colors.DIM}# Pipe flag from command{Colors.RESET}
+  {Colors.CYAN}cat /flag | dojo submit{Colors.RESET}
+
+  {Colors.DIM}# Submit as root to read protected flag{Colors.RESET}
+  {Colors.CYAN}sudo dojo submit{Colors.RESET}
+
+  {Colors.DIM}# Move to next challenge{Colors.RESET}
+  {Colors.CYAN}dojo next{Colors.RESET}
+
+  {Colors.DIM}# Restart current challenge{Colors.RESET}
+  {Colors.CYAN}dojo restart{Colors.RESET}
+
+  {Colors.DIM}# Restart in practice mode{Colors.RESET}
+  {Colors.CYAN}dojo restart --practice{Colors.RESET}
+
+  {Colors.DIM}# Browse dojos in interactive tree{Colors.RESET}
+  {Colors.CYAN}dojo info{Colors.RESET}
+
+{Colors.BOLD}LEARN MORE{Colors.RESET}
+  {Colors.CYAN}https://pwn.college{Colors.RESET}
+""")
+
+def main():
+    if len(sys.argv) < 2 or sys.argv[1] in ['-h', '--help', 'help']:
+        cmd_help()
+        sys.exit(0)
+
+    command = sys.argv[1]
+    args = sys.argv[2:]
+
+    if command == 'submit':
+        cmd_submit(args)
+    elif command == 'next':
+        cmd_next(args)
+    elif command == 'restart':
+        cmd_restart(args)
+    elif command == 'info':
+        cmd_info(args)
+    else:
+        print_error(f"Unknown command '{command}'")
+        print(f"{Colors.DIM}  Run {Colors.CYAN}dojo help{Colors.RESET}{Colors.DIM} for usage{Colors.RESET}")
+        sys.exit(1)
+
+if __name__ == '__main__':
+    main()

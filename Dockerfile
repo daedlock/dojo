@@ -1,28 +1,5 @@
 # syntax=docker/dockerfile:1
 
-FROM ubuntu:24.04 AS kata-builder
-
-ENV KATA_VERSION=3.19.1
-
-SHELL ["/bin/bash", "-euo", "pipefail", "-c"]
-
-RUN apt-get update && apt-get install -y --no-install-recommends \
-      build-essential bc flex bison libssl-dev libelf-dev dwarves \
-      curl ca-certificates yq \
-    && rm -rf /var/lib/apt/lists/*
-
-ADD https://github.com/kata-containers/kata-containers.git#${KATA_VERSION} /src/kata-containers
-
-WORKDIR /src/kata-containers/tools/packaging/kernel
-
-RUN <<EOF
-  KERNEL_VERSION=$(yq -r '.assets.kernel.version' ../../../versions.yaml)
-  echo 'CONFIG_SECURITY_LANDLOCK=y' >> configs/fragments/x86_64/base.conf
-  ./build-kernel.sh -v "$KERNEL_VERSION" setup
-  ./build-kernel.sh -v "$KERNEL_VERSION" build
-  ./build-kernel.sh -v "$KERNEL_VERSION" install
-EOF
-
 FROM ubuntu:24.04 AS dojo
 
 SHELL ["/bin/bash", "-ceox", "pipefail"]
@@ -53,20 +30,21 @@ EOF
 RUN <<EOF
 curl -fsSL https://get.docker.com | VERSION=27.5.1 sh
 sed -i 's|-H fd:// ||' /lib/systemd/system/docker.service
+curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
+curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | \
+  sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | \
+  tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
+apt-get update
+apt-get install -y nvidia-container-toolkit
+nvidia-ctk runtime configure --runtime=docker
 EOF
 
 COPY etc/docker/daemon*.json /tmp/
 RUN cp /tmp/daemon.json /etc/docker/daemon.json
 
-ADD https://raw.githubusercontent.com/moby/profiles/master/seccomp/default.json /etc/docker/seccomp.json
+COPY etc/docker/seccomp.json /etc/docker/seccomp.json
 
-RUN <<EOF
-KATA_VERSION=3.19.1
-curl -L https://github.com/kata-containers/kata-containers/releases/download/${KATA_VERSION}/kata-static-${KATA_VERSION}-amd64.tar.xz | tar -xJ --strip-components=2 -C /opt
-ln -s /opt/kata/bin/containerd-shim-kata-v2 /usr/local/bin/containerd-shim-kata-v2
-EOF
 
-COPY --from=kata-builder /usr/share/kata-containers/vmlinux.container /opt/kata/share/kata-containers/vmlinux.container
 
 RUN <<EOF
 cd /tmp

@@ -107,9 +107,19 @@ fi
 docker build -t pwncollege/dojo .
 docker stop dojo
 docker rm dojo
+
+GPU_ARGS=()
+if [ -e /dev/nvidia0 ] && command -v nvidia-container-toolkit &> /dev/null; then
+    GPU_ARGS=(--gpus all)
+    echo "GPU support enabled"
+else
+    echo "GPU support disabled (nvidia-container-toolkit not installed)"
+fi
+
 docker run \
     --name dojo \
     --privileged \
+    "${GPU_ARGS[@]}" \
     --device=/dev/kvm:/dev/kvm \
     -v "${DOJO_PATH}:/opt/pwn.college" \
     -v "${DATA_PATH}:/data" \
@@ -117,6 +127,10 @@ docker run \
     -p 80:80 \
     -p 443:443 \
     -p 5900:5900 \
+    -p 47984:47984 \
+    -p 47989:47989 \
+    -p 47990:47990 \
+    -p 48010:48010 \
     -e INTERNET_FOR_ALL=True \
     -e DOJO_WORKSPACE=full \
     -e CORS_ORIGINS="${CORS_ORIGINS}" \

@@ -11,7 +11,7 @@ import docker
 import docker.errors
 import docker.types
 import redis
-from flask import abort, request, current_app
+from flask import abort, request, current_app, session
 from flask_restx import Namespace, Resource
 from CTFd.cache import cache
 from CTFd.models import Users, Solves
@@ -24,6 +24,7 @@ from ...models import DojoModules, DojoChallenges
 from ...utils import (
     container_name,
     lookup_workspace_token,
+    generate_workspace_token,
     resolved_tar,
     serialize_user_flag,
     user_docker_client,
@@ -104,6 +105,8 @@ def start_container(docker_client, user, as_user, user_mounts, dojo_challenge, p
         "sha256"
     ).hexdigest()
 
+    workspace_token = generate_workspace_token(as_user, expiration=datetime.datetime.utcnow() + datetime.timedelta(hours=7))
+
     challenge_bin_path = "/run/challenge/bin"
     dojo_bin_path = "/run/dojo/bin"
     image = docker_client.images.get(resolved_dojo_challenge.image)
@@ -125,12 +128,20 @@ def start_container(docker_client, user, as_user, user_mounts, dojo_challenge, p
             read_only=True,
             propagation="slave",
         ),
+        docker.types.Mount(
+            "/usr/local/bin/dojo",
+            "/opt/pwn.college/workspace/bin/dojo",
+            "bind",
+            read_only=True,
+        ),
         *user_mounts,
     ]
 
     allowed_devices = ["/dev/kvm", "/dev/net/tun"]
     available_devices = set(get_available_devices(docker_client))
     devices = [f"{device}:{device}:rwm" for device in allowed_devices if device in available_devices]
+
+    device_requests = [docker.types.DeviceRequest(count=-1, capabilities=[["gpu", "utility", "compute", "graphics", "display"]])]
 
     container_create_attributes = dict(
         image=resolved_dojo_challenge.image,
@@ -148,6 +159,11 @@ def start_container(docker_client, user, as_user, user_mounts, dojo_challenge, p
             "PATH": env_path,
             "SHELL": f"{dojo_bin_path}/fish",
             "DOJO_AUTH_TOKEN": auth_token,
+            "DOJO_WORKSPACE_TOKEN": workspace_token.value,
+            "DOJO_SESSION": request.cookies.get('session', ''),
+            "DOJO_ID": dojo_challenge.dojo.reference_id,
+            "DOJO_MODULE": dojo_challenge.module.id,
+            "DOJO_CHALLENGE": dojo_challenge.id,
         },
         labels={
             "dojo.dojo_id": dojo_challenge.dojo.reference_id,
@@ -161,6 +177,13 @@ def start_container(docker_client, user, as_user, user_mounts, dojo_challenge, p
         },
         mounts=mounts,
         devices=devices,
+        device_requests=device_requests,
+        ports={
+            "47984/tcp": 47984,
+            "47989/tcp": 47989,
+            "47990/tcp": 47990,
+            "48010/tcp": 48010,
+        },
         network=None,
         extra_hosts={
             hostname: "127.0.0.1",
@@ -179,7 +202,7 @@ def start_container(docker_client, user, as_user, user_mounts, dojo_challenge, p
         cpu_quota=400000,
         pids_limit=1024,
         mem_limit="4G",
-        runtime="io.containerd.run.kata.v2" if resolved_dojo_challenge.privileged else "runc",
+        runtime="runc",
         cap_add=["SYS_PTRACE", "SYS_ADMIN"] if resolved_dojo_challenge.privileged else ["SYS_PTRACE"],
         security_opt=[f"seccomp={SECCOMP}"],
         sysctls={"net.ipv4.ip_unprivileged_port_start": 1024},

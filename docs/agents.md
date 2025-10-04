@@ -193,3 +193,20 @@ SOCKET_PATH = "/var/run/docker.sock"
 ```
 
 Function and variable names must be self-documenting. If you feel the need to add a comment, first consider if better naming would make it unnecessary.
+- start a challenge like this curl 'http://localhost/pwncollege_api/v1/docker' \
+  -H 'Accept: */*' \
+  -H 'Accept-Language: en,de;q=0.9,en-US;q=0.8,ar;q=0.7' \
+  -H 'Authorization: Bearer fake' \
+  -H 'Connection: keep-alive' \
+  -H 'Content-Type: application/json' \
+  -b '__next_hmr_refresh_hash__=f7ce6fe68ea1972fd2c728178ff5f74c633457081244afec; session=fbfe21a7-fd30-45f2-bc8f-4d5e15e0bb58.QqngqTx01r-eclyhVc5UGBEFfy0' \
+  -H 'Origin: http://localhost:3000' \
+  -H 'Referer: http://localhost:3000/' \
+  -H 'Sec-Fetch-Dest: empty' \
+  -H 'Sec-Fetch-Mode: cors' \
+  -H 'Sec-Fetch-Site: same-site' \
+  -H 'User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36' \
+  -H 'sec-ch-ua: "Chromium";v="140", "Not=A?Brand";v="24", "Google Chrome";v="140"' \
+  -H 'sec-ch-ua-mobile: ?0' \
+  -H 'sec-ch-ua-platform: "Linux"' \
+  --data-raw '{"dojo":"program-security","module":"program-security","challenge":"clobbercode","practice":false}'

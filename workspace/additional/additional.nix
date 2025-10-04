@@ -11,6 +11,7 @@ let
     flask
     ipython
     jupyter
+    protobuf
     psutil
     pwntools
     pycryptodome

@@ -6,6 +6,11 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
+WATCH_MODE=false
+if [ "$1" = "-w" ]; then
+  WATCH_MODE=true
+fi
+
 # Get VNC password from API
 RESPONSE=$(curl -s http://dojo.localhost/pwncollege_api/v1/workspace/vnc_url \
   -H "Cookie: $(cat ~/.dojo_session 2>/dev/null || echo '')")
@@ -30,41 +35,78 @@ else
   echo -e "${GREEN}✓ Got VNC password: $PASSWORD${NC}"
 fi
 
-echo -e "${GREEN}Starting VNC connection loop...${NC}"
-echo -e "${YELLOW}Switch challenges freely - VNC will auto-reconnect!${NC}"
-echo ""
+if [ "$WATCH_MODE" = true ]; then
+  echo -e "${GREEN}Starting VNC connection loop...${NC}"
+  echo -e "${YELLOW}Switch challenges freely - VNC will auto-reconnect!${NC}"
+  echo ""
 
-# Start keepalive background process
-(
+  # Start keepalive background process
+  (
+    while true; do
+      sleep 3600
+      curl -s http://dojo.localhost/pwncollege_api/v1/workspace \
+        -H "Cookie: $(cat ~/.dojo_session)" > /dev/null 2>&1
+    done
+  ) &
+  KEEPALIVE_PID=$!
+
   while true; do
-    sleep 3600  # Every 1 hour
-    curl -s http://dojo.localhost/pwncollege_api/v1/workspace \
-      -H "Cookie: $(cat ~/.dojo_session)" > /dev/null 2>&1
-  done
-) &
-KEEPALIVE_PID=$!
+    WORKSPACE_STATUS=$(curl -s http://dojo.localhost/pwncollege_api/v1/workspace \
+      -H "Cookie: $(cat ~/.dojo_session)" \
+      | jq -r '.active // false')
 
-while true; do
-  # Check if workspace is active
+    if [ "$WORKSPACE_STATUS" != "true" ]; then
+      echo -e "${YELLOW}⏳ Waiting for workspace to start...${NC}"
+      sleep 3
+      continue
+    fi
+
+    echo -e "${YELLOW}🖥️  Starting desktop service...${NC}"
+    curl -s http://dojo.localhost/pwncollege_api/v1/workspace?service=desktop \
+      -H "Cookie: $(cat ~/.dojo_session)" > /dev/null
+
+    sleep 2
+
+    PASS_FILE=$(mktemp)
+    echo "$PASSWORD" | vncpasswd -f > "$PASS_FILE" 2>/dev/null
+
+    echo -e "${GREEN}🔌 Connecting to VNC...${NC}"
+
+    vncviewer \
+      -shared \
+      -ViewOnly=0 \
+      -DotWhenNoCursor=0 \
+      -AcceptClipboard=1 \
+      -SendClipboard=1 \
+      -SetPrimary=1 \
+      -SendPrimary=1 \
+      -passwd "$PASS_FILE" \
+      localhost:5900
+
+    EXIT_CODE=$?
+    rm -f "$PASS_FILE"
+
+    echo -e "${YELLOW}🔄 Connection ended (exit code: $EXIT_CODE), reconnecting in 3 seconds...${NC}"
+    sleep 3
+  done
+
+  kill $KEEPALIVE_PID 2>/dev/null
+else
   WORKSPACE_STATUS=$(curl -s http://dojo.localhost/pwncollege_api/v1/workspace \
     -H "Cookie: $(cat ~/.dojo_session)" \
     | jq -r '.active // false')
 
   if [ "$WORKSPACE_STATUS" != "true" ]; then
-    echo -e "${YELLOW}⏳ Waiting for workspace to start...${NC}"
-    sleep 3
-    continue
+    echo -e "${YELLOW}⏳ Workspace not active. Start a challenge first.${NC}"
+    exit 1
   fi
 
-  # Start desktop service (this is idempotent - safe to call multiple times)
   echo -e "${YELLOW}🖥️  Starting desktop service...${NC}"
   curl -s http://dojo.localhost/pwncollege_api/v1/workspace?service=desktop \
     -H "Cookie: $(cat ~/.dojo_session)" > /dev/null
 
-  # Wait a moment for VNC to start
   sleep 2
 
-  # Create a temporary password file
   PASS_FILE=$(mktemp)
   echo "$PASSWORD" | vncpasswd -f > "$PASS_FILE" 2>/dev/null
 
@@ -78,17 +120,8 @@ while true; do
     -SendClipboard=1 \
     -SetPrimary=1 \
     -SendPrimary=1 \
-    -ReconnectOnError=1 \
     -passwd "$PASS_FILE" \
     localhost:5900
 
-  EXIT_CODE=$?
   rm -f "$PASS_FILE"
-
-  # Don't exit on any exit code - always reconnect unless interrupted (Ctrl+C)
-  echo -e "${YELLOW}🔄 Connection ended (exit code: $EXIT_CODE), reconnecting in 3 seconds...${NC}"
-  sleep 3
-done
-
-# Cleanup keepalive on exit
-kill $KEEPALIVE_PID 2>/dev/null
+fi
