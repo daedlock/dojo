@@ -143,6 +143,13 @@ def load(app):
 
     app.permanent_session_lifetime = datetime.timedelta(days=180)
 
+    if DOJO_HOST:
+        domain_parts = DOJO_HOST.split('.')
+        if len(domain_parts) >= 2:
+            app.config['SESSION_COOKIE_DOMAIN'] = f".{'.'.join(domain_parts[-2:])}"
+            app.config['SESSION_COOKIE_SAMESITE'] = 'None'
+            app.config['SESSION_COOKIE_SECURE'] = True
+
     CHALLENGE_CLASSES["dojo"] = DojoChallenge
     FLAG_CLASSES["dojo"] = DojoFlag
 

@@ -110,7 +110,7 @@ class VncUrl(Resource):
         interact_password = container_password(container, "desktop", "interact")
         password = interact_password[:8]
 
-        vnc_url = "vnc.dojo.localhost"
+        vnc_url = "vnc.dojo.local"
 
         return {
             "success": True,

@@ -4,7 +4,6 @@ function usage {
     echo "Usage: $0 [-w] [-p] [-c]"
     echo ""
     echo "  -w  rebuild workspace (removes workspace data to force rebuild)"
-    echo "  -p  production mode (sets DOJO_HOST to dojo.dlock.tech)"
     echo "  -c  cleanup Docker build cache and dangling images"
     exit
 }
@@ -56,60 +55,21 @@ if [ "$REBUILD_WORKSPACE" = true ]; then
     docker exec dojo docker ps -q --filter "name=user_" | xargs -r docker exec dojo docker restart
 fi
 
-# check if production mode is set
-if [ "$PROD_MODE" = true ]; then
-    echo "Running in production mode"
-    export DOJO_HOST="dojo.dlock.tech"
-    export FRONTEND_HOST="app.dlock.tech"
-    export CORS_ORIGINS="https://${FRONTEND_HOST}"
-else
 
-    export DOJO_HOST="dojo.localhost"
 
-    if [ "$LOCAL" = true ]; then
-        echo "Running in local mode"
-        export FRONTEND_HOST="app.dojo.localhost"
-        export CORS_ORIGINS="http://${FRONTEND_HOST}"
-    else
-        export CORS_ORIGINS="http://localhost:3000"
-    fi
+echo "Running in local mode"
 
-    # Check if hosts file contains required entries for non-production mode
-    if [ "$PROD_MODE" != true ]; then
-        MISSING_HOSTS=""
-        if ! grep -q "127.0.0.1.*${DOJO_HOST}" /etc/hosts 2>/dev/null; then
-            MISSING_HOSTS="${DOJO_HOST}"
-        fi
-        if [ -n "$FRONTEND_HOST" ] && ! grep -q "127.0.0.1.*${FRONTEND_HOST}" /etc/hosts 2>/dev/null; then
-            if [ -n "$MISSING_HOSTS" ]; then
-                MISSING_HOSTS="${MISSING_HOSTS} ${FRONTEND_HOST}"
-            else
-                MISSING_HOSTS="${FRONTEND_HOST}"
-            fi
-        fi
-
-        if [ -n "$MISSING_HOSTS" ]; then
-            echo ""
-            echo "⚠️  WARNING: The following hosts are not found in /etc/hosts:"
-            echo "   ${MISSING_HOSTS}"
-            echo ""
-            echo "   Add this line to /etc/hosts for proper local development:"
-            echo -n "   127.0.0.1 ${DOJO_HOST}"
-            if [ -n "$FRONTEND_HOST" ]; then
-                echo -n " ${FRONTEND_HOST}"
-            fi
-            echo ""
-            echo ""
-        fi
-    fi
-fi
+export DOJO_HOST="dojo.local"
+export FRONTEND_HOST="app.dojo.local"
+export CORS_ORIGINS="https://${FRONTEND_HOST}"
 
 docker build -t pwncollege/dojo .
 docker stop dojo
 docker rm dojo
 
+
 GPU_ARGS=()
-if [ -e /dev/nvidia0 ] && command -v nvidia-container-toolkit &> /dev/null; then
+if [ -e /dev/nvidia0 ] && command -v nvidia-container-toolkit &>/dev/null; then
     GPU_ARGS=(--gpus all)
     echo "GPU support enabled"
 else
@@ -124,8 +84,8 @@ docker run \
     -v "${DOJO_PATH}:/opt/pwn.college" \
     -v "${DATA_PATH}:/data" \
     -p 23:22 \
-    -p 80:80 \
-    -p 443:443 \
+    -p 8888:80 \
+    -p 8443:443 \
     -p 5900:5900 \
     -p 47984:47984 \
     -p 47989:47989 \

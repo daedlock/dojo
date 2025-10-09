@@ -12,7 +12,7 @@ if [ "$1" = "-w" ]; then
 fi
 
 # Get VNC password from API
-RESPONSE=$(curl -s http://dojo.localhost/pwncollege_api/v1/workspace/vnc_url \
+RESPONSE=$(curl -s https://dojo.local/pwncollege_api/v1/workspace/vnc_url \
   -H "Cookie: $(cat ~/.dojo_session 2>/dev/null || echo '')")
 
 PASSWORD=$(echo "$RESPONSE" | jq -r '.password // empty')
@@ -44,14 +44,14 @@ if [ "$WATCH_MODE" = true ]; then
   (
     while true; do
       sleep 3600
-      curl -s http://dojo.localhost/pwncollege_api/v1/workspace \
+      curl -s https://dojo.local/pwncollege_api/v1/workspace \
         -H "Cookie: $(cat ~/.dojo_session)" > /dev/null 2>&1
     done
   ) &
   KEEPALIVE_PID=$!
 
   while true; do
-    WORKSPACE_STATUS=$(curl -s http://dojo.localhost/pwncollege_api/v1/workspace \
+    WORKSPACE_STATUS=$(curl -s https://dojo.local/pwncollege_api/v1/workspace \
       -H "Cookie: $(cat ~/.dojo_session)" \
       | jq -r '.active // false')
 
@@ -62,7 +62,7 @@ if [ "$WATCH_MODE" = true ]; then
     fi
 
     echo -e "${YELLOW}🖥️  Starting desktop service...${NC}"
-    curl -s http://dojo.localhost/pwncollege_api/v1/workspace?service=desktop \
+    curl -s https://dojo.local/pwncollege_api/v1/workspace?service=desktop \
       -H "Cookie: $(cat ~/.dojo_session)" > /dev/null
 
     sleep 2
@@ -92,7 +92,7 @@ if [ "$WATCH_MODE" = true ]; then
 
   kill $KEEPALIVE_PID 2>/dev/null
 else
-  WORKSPACE_STATUS=$(curl -s http://dojo.localhost/pwncollege_api/v1/workspace \
+  WORKSPACE_STATUS=$(curl -s https://dojo.local/pwncollege_api/v1/workspace \
     -H "Cookie: $(cat ~/.dojo_session)" \
     | jq -r '.active // false')
 
@@ -102,7 +102,7 @@ else
   fi
 
   echo -e "${YELLOW}🖥️  Starting desktop service...${NC}"
-  curl -s http://dojo.localhost/pwncollege_api/v1/workspace?service=desktop \
+  curl -s https://dojo.local/pwncollege_api/v1/workspace?service=desktop \
     -H "Cookie: $(cat ~/.dojo_session)" > /dev/null
 
   sleep 2
